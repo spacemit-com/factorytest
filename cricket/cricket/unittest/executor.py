@@ -47,11 +47,14 @@ class PyTestExecutor(object):
 
         if not self.specified_list:
             suite = loader.discover('.')
-            self.stream_suite(suite)
         else:
-            for module in self.specified_list:
-                suite = loader.loadTestsFromName(module)
-                self.stream_suite(suite)
+            # FIXME: TestCase stuck when sleep in test method
+            # for module in self.specified_list:
+            #     suite = loader.loadTestsFromName(module)
+            #     self.stream_suite(suite)
+            suite = loader.loadTestsFromNames(self.specified_list)
+
+        self.stream_suite(suite)
 
 
 class PyTestCoverageExecutor(PyTestExecutor):

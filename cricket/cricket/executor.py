@@ -26,8 +26,9 @@ def enqueue_output(out, queue):
 
 class Executor(EventSource):
     "A wrapper around the subprocess that executes tests."
-    def __init__(self, project, count, labels):
+    def __init__(self, project, module, count, labels):
         self.project = project
+        self.module = module
 
         self.proc = subprocess.Popen(
             self.project.execute_commandline(labels),
@@ -35,7 +36,6 @@ class Executor(EventSource):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             shell=False,
-            bufsize=1,
             close_fds='posix' in sys.builtin_module_names
         )
 
@@ -151,6 +151,14 @@ class Executor(EventSource):
                         status = TestMethod.STATUS_ERROR
                         error = post.get('error')
 
+                    output = post.get('output')
+                    if output:
+                        print(f'{self.current_test.path}:')
+                        print(output)
+
+                    if error:
+                        print(error)
+
                     # Increase the count of executed tests
                     self.completed_count = self.completed_count + 1
 
@@ -162,7 +170,7 @@ class Executor(EventSource):
 
                     self.current_test.set_result(
                         status=status,
-                        output=post.get('output'),
+                        output=output,
                         error=error,
                         duration=end_time - start_time,
                     )
@@ -189,7 +197,7 @@ class Executor(EventSource):
                     self.result_count[status] = self.result_count[status] + 1
 
                     # Notify the display to update.
-                    self.emit('test_end', test_path=self.current_test.path, result=status, remaining_time=remaining)
+                    self.emit('test_end', module=self.module, test_path=self.current_test.path, result=status, remaining_time=remaining)
 
                     # Clear the decks for the next test.
                     self.current_test = None
@@ -207,7 +215,7 @@ class Executor(EventSource):
                 if self.buffer is None:
                     # Suite isn't running yet - just display the output
                     # as a status update line.
-                    self.emit('test_status_update', update=line)
+                    self.emit('test_status_update', module=self.module, update=line)
                 else:
                     # Suite is running - have we got an active test?
                     # Doctest (and some other tools) output invisible escape sequences.
@@ -225,24 +233,24 @@ class Executor(EventSource):
                             # No active test; first line tells us which test is running.
                             pre = json.loads(line)
                         except ValueError:
-                            self.emit('suit_end')
+                            self.emit('suit_end', module=self.module)
                             return True
                         self.current_test = self.project.confirm_exists(pre['path'])
-                        self.emit('test_start', test_path=pre['path'])
+                        self.emit('test_start', module=self.module, test_path=pre['path'])
         # If we're not finished, requeue the event.
         if finished:
             if self.error_buffer:
-                self.emit('suite_end', error='\n'.join(self.error_buffer))
+                self.emit('suite_end', module=self.module, error='\n'.join(self.error_buffer))
             else:
-                self.emit('suite_end')
+                self.emit('suite_end', module=self.module)
             return False
 
         elif stopped:
             # Suite has stopped producing output.
             if self.error_buffer:
-                self.emit('suite_error', error=b'\n'.join(self.error_buffer))
+                self.emit('suite_error', module=self.module, error='\n'.join(self.error_buffer))
             else:
-                self.emit('suite_error', error='Test output ended unexpectedly')
+                self.emit('suite_error', module=self.module, error='Test output ended unexpectedly')
 
             # Suite has finished; don't requeue
             return False

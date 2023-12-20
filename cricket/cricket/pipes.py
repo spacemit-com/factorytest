@@ -127,7 +127,7 @@ class PipedTestResult(unittest.result.TestResult):
             'status': 'E',
             'end_time': time.time(),
             'description': self.description(test),
-            'error': '\n'.join(traceback.format_exception(*err)),
+            'error': ''.join(traceback.format_exception(*err)),
             'output': self._stdout.getvalue(),
         }
         self.stream.write('%s\n' % json.dumps(body))
@@ -140,7 +140,7 @@ class PipedTestResult(unittest.result.TestResult):
             'status': 'F',
             'end_time': time.time(),
             'description': self.description(test),
-            'error': '\n'.join(traceback.format_exception(*err)),
+            'error': ''.join(traceback.format_exception(*err)),
             'output': self._stdout.getvalue(),
         }
         self.stream.write('%s\n' % json.dumps(body))
@@ -166,7 +166,7 @@ class PipedTestResult(unittest.result.TestResult):
             'status': 'x',
             'end_time': time.time(),
             'description': self.description(test),
-            'error': '\n'.join(traceback.format_exception(*err)),
+            'error': ''.join(traceback.format_exception(*err)),
             'output': self._stdout.getvalue(),
         }
         self.stream.write('%s\n' % json.dumps(body))
@@ -206,6 +206,8 @@ class PipedTestRunner(unittest.TextTestRunner):
 
         # Create the result pipe, and run the tests with it.
         result = PipedTestResult(self.stream, self.use_old_discovery)
+        # test is TestSuite, as TestSuite.run(result)
+        # via BaseTestSuite.__call__
         test(result)
 
         # Report end of test run

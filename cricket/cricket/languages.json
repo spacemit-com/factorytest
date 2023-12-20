@@ -1,0 +1,30 @@
+{
+    "zh": {
+        "title": "工厂测试",
+        "run_all_button": "运行",
+        "run_selected_button": "运行选择",
+        "stop_button": "停止",
+        "quit_button": "退出",
+        "reboot_button": "重启",
+        "poweroff_button": "关闭",
+        "test_table_head": ["模块", "测试项", "结果"],
+        "test_step": "测试步骤",
+        "start_button": "开始",
+        "pass_button": "通过",
+        "fail_button": "失败"
+    },
+    "en": {
+        "title": "Factory Test",
+        "run_all_button": "Run",
+        "run_selected_button": "Run Selected",
+        "stop_button": "Stop",
+        "quit_button": "Quit",
+        "reboot_button": "Reboot",
+        "poweroff_button": "Shutdown",
+        "test_table_head": ["Module", "Test Item", "Result"],
+        "test_step": "Test Step",
+        "start_button": "Start",
+        "pass_button": "Pass",
+        "fail_button": "Fail"
+    }
+}
