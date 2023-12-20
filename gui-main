@@ -1,0 +1,9 @@
+#!/bin/bash -e
+
+ROOT=$(dirname "$(readlink -f "$0")")
+
+export PYTHONPATH=$ROOT/cricket:$PYTHONPATH
+
+pushd $ROOT/tests > /dev/null
+python -m cricket.unittest
+popd > /dev/null
