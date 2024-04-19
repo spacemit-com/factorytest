@@ -12,23 +12,25 @@ from PyQt5.QtWidgets import (
     QGridLayout
 )
 
-import threading
-
 from cricket.lang import SimpleLang
 
-class SimpleManualTestWindow(SimpleLang):
-    def __init__(self, test_routine, stop_routine, languages) -> None:
+result = False
+
+class MicTestWindow(SimpleLang):
+    def __init__(self, record_routine, stop_record, playback_routine, stop_playback, languages) -> None:
         super().__init__()
 
-        self.test_routine = test_routine
-        self.stop_routine = stop_routine
+        self.record_routine = record_routine
+        self.stop_record = stop_record
+        self.playback_routine = playback_routine
+        self.stop_playback = stop_playback
         self.languages = languages
 
         self.app = QApplication([])
 
         self.window = QMainWindow()
         self.window.setWindowTitle(self._get_text('title'))
-        self.window.setWindowFlags(Qt.WindowStaysOnTopHint)
+        # self.window.setWindowFlags(Qt.WindowStaysOnTopHint)
 
         # Main content
         content = QFrame(self.window)
@@ -52,15 +54,15 @@ class SimpleManualTestWindow(SimpleLang):
         toolbar = QFrame(content)
         toolbar_layout = QGridLayout(toolbar)
 
-        self.start_button = QPushButton(self.get_text('start_button'), toolbar)
-        self.start_button.clicked.connect(self.cmd_start)
-        self.start_button.setFocus()
-        toolbar_layout.addWidget(self.start_button, 0, 0)
+        self.record_button = QPushButton(self.get_text('record_button'), toolbar)
+        self.record_button.clicked.connect(self.cmd_record)
+        self.record_button.setFocus()
+        toolbar_layout.addWidget(self.record_button, 0, 0)
 
-        self.stop_button = QPushButton(self.get_text('stop_button'), toolbar)
-        self.stop_button.setDisabled(True)
-        self.stop_button.clicked.connect(self.cmd_stop)
-        toolbar_layout.addWidget(self.stop_button, 0, 1)
+        self.playback_button = QPushButton(self.get_text('playback_button'), toolbar)
+        self.playback_button.setDisabled(True)
+        self.playback_button.clicked.connect(self.cmd_playback)
+        toolbar_layout.addWidget(self.playback_button, 0, 1)
 
         self.pass_button = QPushButton(self.get_text('pass_button'), toolbar)
         self.pass_button.setDisabled(True)
@@ -85,9 +87,10 @@ class SimpleManualTestWindow(SimpleLang):
             y = (screen_geometry.height() - window_geometry.height()) // 2
             self.window.move(x, y)
 
-        self.window.show()
+        # self.window.show()
+        self.window.showFullScreen()
 
-        self.result = False
+        self.app.exec_()
 
     def _get_text(self, key):
         if self.languages:
@@ -99,37 +102,36 @@ class SimpleManualTestWindow(SimpleLang):
 
         return 'Undefined'
 
-    def cmd_start(self):
-        self.status.showMessage('Running...')
-        self.start_button.setDisabled(True)
-        self.thread = threading.Thread(target=self.test_routine)
-        self.thread.start()
-        self.stop_button.setDisabled(False)
+    def cmd_record(self):
+        self.status.showMessage('Recording...')
+        self.record_button.setDisabled(True)
+        self.record_routine()
+        self.playback_button.setDisabled(False)
+
+    def cmd_playback(self):
+        self.stop_record()
+
+        self.status.showMessage('Playback...')
+        self.playback_button.setDisabled(True)
+        self.playback_routine()
         self.pass_button.setDisabled(False)
         self.fail_button.setDisabled(False)
 
-    def cmd_stop(self):
-        self.status.showMessage('Stopping...')
-        self.stop_button.setDisabled(True)
-        self.stop_routine()
-        self.thread.join()
-        self.start_button.setDisabled(True)
-        self.status.showMessage('Stopped')
-
     def cmd_pass(self):
+        global result
+
         self.status.showMessage('Stopping...')
-        self.stop_routine()
-        self.thread.join()
-        self.result = True
+        self.stop_playback()
+        result = True
         self.app.quit()
 
     def cmd_fail(self):
+        global result
+
         self.status.showMessage('Stopping...')
-        self.stop_routine()
-        self.thread.join()
-        self.result = False
+        self.stop_playback()
+        result = False
         self.app.quit()
 
-    def determine(self):
-        self.app.exec_()
-        return self.result
+def GetTestResult():
+    return result
