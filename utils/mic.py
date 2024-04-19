@@ -79,13 +79,13 @@ class MicTestWindow(SimpleLang):
         self.window.setCentralWidget(content)
 
         # Move to center
-        screen = QGuiApplication.primaryScreen()
-        if screen:
-            screen_geometry = screen.geometry()
-            window_geometry = self.window.geometry()
-            x = (screen_geometry.width() - window_geometry.width()) // 2
-            y = (screen_geometry.height() - window_geometry.height()) // 2
-            self.window.move(x, y)
+        # screen = QGuiApplication.primaryScreen()
+        # if screen:
+        #     screen_geometry = screen.geometry()
+        #     window_geometry = self.window.geometry()
+        #     x = (screen_geometry.width() - window_geometry.width()) // 2
+        #     y = (screen_geometry.height() - window_geometry.height()) // 2
+        #     self.window.move(x, y)
 
         # self.window.show()
         self.window.showFullScreen()

@@ -77,16 +77,13 @@ class SpeakerTestWindow(SimpleLang):
         self.window.setCentralWidget(content)
 
         # Move to center
-        screen = QGuiApplication.primaryScreen()
-        if screen:
-            screen_geometry = screen.geometry()
-            print(f'screen: {screen_geometry.width()}x{screen_geometry.height()}')
-            window_geometry = self.window.geometry()
-            print(f'window: {window_geometry.width()}x{window_geometry.height()}')
-            x = (screen_geometry.width() - window_geometry.width()) // 2
-            y = (screen_geometry.height() - window_geometry.height()) // 2
-            print(f'position: {x}, {y}')
-            self.window.move(x, y)
+        # screen = QGuiApplication.primaryScreen()
+        # if screen:
+        #     screen_geometry = screen.geometry()
+        #     window_geometry = self.window.geometry()
+        #     x = (screen_geometry.width() - window_geometry.width()) // 2
+        #     y = (screen_geometry.height() - window_geometry.height()) // 2
+        #     self.window.move(x, y)
 
         # self.window.show()
         self.window.showFullScreen()
