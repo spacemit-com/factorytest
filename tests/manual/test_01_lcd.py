@@ -60,6 +60,7 @@ class LCDTestWindow(SimpleLang):
         self.pass_button = QPushButton(self.get_text('pass_button'), toolbar)
         # self.pass_button.setDisabled(True)
         self.pass_button.clicked.connect(self.cmd_pass)
+        self.pass_button.setFocus()
         toolbar_layout.addWidget(self.pass_button, 0, 0)
 
         self.fail_button = QPushButton(self.get_text('fail_button'), toolbar)
