@@ -6,7 +6,7 @@
         "stop_button": "停止",
         "quit_button": "退出",
         "reboot_button": "重启",
-        "poweroff_button": "关闭",
+        "poweroff_button": "关机",
         "test_table_head": ["模块", "测试项", "结果"],
         "test_step": "测试步骤",
         "start_button": "开始",
