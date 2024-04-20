@@ -15,7 +15,7 @@ class BTTest(TestCase):
     }
 
     def test_scan(self):
-        scan = 'hcitool -i hci0 scan'
+        scan = 'hcitool -i hci0 scan --length=5'
         try:
             result = subprocess.run(scan, capture_output=True, shell=True, timeout=10)
             self.assertEqual(result.returncode, 0)
