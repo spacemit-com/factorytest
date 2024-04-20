@@ -386,11 +386,11 @@ class MainWindow(QMainWindow, SimpleLang):
         #     'skip': self.executor.result_count.get(TestMethod.STATUS_SKIP, 0),
         # })
 
-        # Reset the buttons
-        self.reset_button_states_on_end()
-
         # Drop the reference to the executor
         self.executor[module] = None
+
+        # Reset the buttons
+        self.reset_button_states_on_end()
 
     def on_executorSuiteError(self, event, module, error):
         "An error occurred running the test suite."
@@ -406,6 +406,7 @@ class MainWindow(QMainWindow, SimpleLang):
         is_stoped = True
         for executor in self.executor.values():
             if executor and executor.is_running:
+                print(executor)
                 is_stoped = False
 
         if is_stoped:
