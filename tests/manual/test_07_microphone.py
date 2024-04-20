@@ -36,7 +36,8 @@ class MicrophoneTest(TestCase):
         timeout = 10
         record_file = '/tmp/record.wav'
         cmd = f'arecord -Dhw:1,0 -r 48000 -f S16_LE -d {timeout} {record_file}'
-        self.record_proc = subprocess.Popen(cmd, shell=True)
+        self.record_proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE,
+                                            stderr=subprocess.PIPE)
 
     def _stop_record(self):
         if self.record_proc.poll() is None:
@@ -50,7 +51,8 @@ class MicrophoneTest(TestCase):
         print(f'playback amixer: {result.returncode}')
 
         cmd = 'aplay -Dhw:1,0 -r 48000 -f S16_LE /tmp/record.wav'
-        self.playback_proc = subprocess.Popen(cmd, shell=True)
+        self.playback_proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE,
+                                              stderr=subprocess.PIPE)
 
     def _stop_playback(self):
         if self.playback_proc.poll() is None:
