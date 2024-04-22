@@ -13,6 +13,7 @@
         "play_button": "播放",
         "record_button": "录音",
         "playback_button": "回放",
+        "speed_button": "速度",
         "pass_button": "通过",
         "fail_button": "失败"
     },
@@ -30,6 +31,7 @@
         "play_button": "Play",
         "record_button": "Record",
         "playback_button": "Playback",
+        "speed_button": "Speed",
         "pass_button": "Pass",
         "fail_button": "Fail"
     }
