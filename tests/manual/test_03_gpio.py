@@ -1,7 +1,7 @@
 from unittest import TestCase
 
-import subprocess
 import threading
+import os
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QGuiApplication
@@ -126,6 +126,36 @@ class GPIOTest(TestCase):
         }
     }
 
+    def _export(self, gpios):
+        export_file = '/sys/class/gpio/export'
+        self.assertTrue(os.path.exists(export_file))
+        for gpio in gpios:
+            try:
+                with open(export_file, 'w') as f:
+                    f.write(gpio)
+            except:
+                self.fail(f'Export gpio{gpio} fail')
+
+    def _out(self, gpios, value):
+        for gpio in gpios:
+            try:
+                with open(f'/sys/class/gpio/gpio{gpio}/direction', 'w') as f:
+                    f.write('out')
+                with open(f'/sys/class/gpio/gpio{gpio}/value', 'w') as f:
+                    f.write(value)
+            except:
+                self.fail(f'Set gpio{gpio} fail')
+
+    def _unexport(self, gpios):
+        unexport_file = '/sys/class/gpio/unexport'
+        self.assertTrue(os.path.exists(unexport_file))
+        for gpio in gpios:
+            try:
+                with open(unexport_file, 'w') as f:
+                    f.write(gpio)
+            except:
+                self.fail(f'Unexport gpio{gpio} fail')
+
     def test_gpio(self):
         global result
 
@@ -133,9 +163,20 @@ class GPIOTest(TestCase):
         t.start()
 
         # turn on
+        gpios = [
+            '47', '48', '49', '50', '51', '52',
+            '70', '71', '72', '73', '74',
+            '75', '76', '77', '78',
+            '90', '91', '92',
+        ]
+
+        self._export(gpios)
+        self._out(gpios, '1')
 
         t.join()
 
         # turn off
+        self._out(gpios, '0')
+        self._unexport(gpios)
 
         self.assertTrue(result)
