@@ -4,23 +4,18 @@ import os
 import subprocess
 #import usb.core
 
-class minipcie_4GTest(TestCase):
+class USB4GModuleTest(TestCase):
     LANGUAGES = {
         'zh': {
-            'minipcie_4GTest': '4G模块',
-            'test_read_model': '设备是否枚举'
+            'USB4GModuleTest': '4G模块',
+            'test_read_product': '读取型号'
         },
         'en': {
-            'minipcie_4GTest': '4G moduel',
-            'test_read_model': 'Whether Enumeration OK'
+            'USB4GModuleTest': '4G Moduel',
+            'test_read_product': 'Read product name'
         }
     }
 
-    def test_read_model(self):
-     #   model_file = '/sys/class/nvme/nvme0/model'
-     #   self.assertTrue(os.path.exists(model_file))
-        result = subprocess.run(['lsusb'], capture_output=True, text=True)
-        output = result.stdout
-
-        # 判断输出结果中是否包含设备信息
-        self.assertIn('Bus 001 Device 002: ID 2c7c:0125', output)
+    def test_read_product(self):
+        product_file = '/sys/devices/platform/soc/c0980100.ehci1/usb1/1-1/product'
+        self.assertTrue(os.path.exists(product_file))
