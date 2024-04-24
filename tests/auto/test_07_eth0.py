@@ -1,11 +1,12 @@
 from unittest import TestCase
 
-import os
 import time
 import socket
 import struct
 import fcntl
 import subprocess
+
+from dns.resolver import Resolver
 
 class Eth0Test(TestCase):
     LANGUAGES = {
@@ -35,7 +36,8 @@ class Eth0Test(TestCase):
 
     def test_ping(self):
         ifname = 'eth0'
-        ping = f'ping -I {ifname} -c 3 baidu.com'
+        site = 'baidu.com'
+        ping = f'ping -I {ifname} -c 3 {site}'
         timeout = 10
 
         i = 0
@@ -61,6 +63,19 @@ class Eth0Test(TestCase):
 
         if i == timeout:
             self.fail('Get ip timeout')
+
+        i = 0
+        while i < timeout:
+            try:
+                resolver = Resolver()
+                if resolver.query(site):
+                    break
+            except:
+                time.sleep(1)
+                i += 1
+
+        if i == timeout:
+            self.fail('DNS query timeout')
 
         try:
             result = subprocess.run(ping, capture_output=True, shell=True, timeout=timeout)
