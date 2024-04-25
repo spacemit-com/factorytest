@@ -38,7 +38,7 @@ class Eth0Test(TestCase):
         ifname = 'eth0'
         site = 'baidu.com'
         ping = f'ping -I {ifname} -c 3 {site}'
-        timeout = 10
+        timeout = 15
 
         i = 0
         while i < timeout:
@@ -56,7 +56,11 @@ class Eth0Test(TestCase):
             try:
                 ip = self.get_ip(ifname)
                 print(f'{ifname}: {ip}')
-                break
+                if ip.startswith('169.254.'):
+                    time.sleep(1)
+                    i += 1
+                else:
+                    break
             except:
                 time.sleep(1)
                 i += 1
@@ -68,7 +72,9 @@ class Eth0Test(TestCase):
         while i < timeout:
             try:
                 resolver = Resolver()
-                if resolver.query(site):
+                answer = resolver.query(site)
+                if answer:
+                    print(f'nameserver: {answer.nameserver}')
                     break
             except:
                 time.sleep(1)
