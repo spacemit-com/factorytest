@@ -14,7 +14,8 @@ from PyQt5.QtWidgets import (
     QGroupBox,
     QTableWidget,
     QStatusBar,
-    QTableWidgetItem
+    QTableWidgetItem,
+    QHeaderView
 )
 
 import os
@@ -28,7 +29,7 @@ from cricket.lang import SimpleLang
 # Display constants for test status
 STATUS = {
     TestMethod.STATUS_PASS: {
-        'description': u'Pass',
+        'description': u'通过',
         'symbol': u'\u25cf',
         'tag': 'pass',
         'color': '#28C025',
@@ -40,7 +41,7 @@ STATUS = {
         'color': '#259EBF'
     },
     TestMethod.STATUS_FAIL: {
-        'description': u'Failure',
+        'description': u'失败',
         'symbol': u'F',
         'tag': 'fail',
         'color': '#E32C2E'
@@ -87,6 +88,8 @@ class MainWindow(QMainWindow, SimpleLang):
         self.setWindowTitle(self.get_text('title'))
         # self.showFullScreen()
 
+        self.font_size = 16
+
         # Set up the main content for the window.
         self._setup_main_content()
 
@@ -107,9 +110,12 @@ class MainWindow(QMainWindow, SimpleLang):
         It is a persistent GUI component
         '''
 
+        self.setStyleSheet(f'font-size: {self.font_size}px;')
+
         self.content = QFrame(self)
         self.content_layout = QVBoxLayout(self.content)
 
+        # toolbar
         toolbar = QFrame(self.content)
         layout = QGridLayout(toolbar)
 
@@ -139,19 +145,63 @@ class MainWindow(QMainWindow, SimpleLang):
     
         self.content_layout.addWidget(toolbar)
 
+        # tests
+        # -------------------
+        # |        |        |
+        # | auto   | camera |
+        # |        |        |
+        # -------------------
+        # | manual | audio  |
+        # |        |        |
+        # -------------------
+        self.tests = QFrame(self.content)
+        self.tests_layout = QGridLayout(self.tests)
+
+        self._setup_test_table('auto', 0, 0, 4, 1)
+        self._setup_test_table('manual', 4, 0, 3, 1)
+
+        camera_box = QGroupBox('Camera', self.tests)
+        camera_box_layout = QVBoxLayout(camera_box)
+
+        audio_box = QGroupBox('Audio', self.tests)
+        audio_box_layout = QVBoxLayout(audio_box)
+
+        self.tests_layout.addWidget(camera_box, 0, 1, 4, 1)
+        self.tests_layout.addWidget(audio_box, 4, 1, 3, 1)
+
+        self.tests_layout.setRowStretch(0, 4)
+        self.tests_layout.setRowStretch(1, 4)
+        self.tests_layout.setRowStretch(2, 4)
+        self.tests_layout.setRowStretch(3, 4)
+
+        self.tests_layout.setRowStretch(4, 3)
+        self.tests_layout.setRowStretch(5, 3)
+        self.tests_layout.setRowStretch(6, 3)
+
+        self.tests_layout.setColumnStretch(0, 1)
+        self.tests_layout.setColumnStretch(1, 1)
+
+        self.content_layout.addWidget(self.tests)
+
+        # set main content to window
         self.setCentralWidget(self.content)
 
-    def _setup_test_table(self, name):
+    def _setup_test_table(self, name, row, column, row_span, column_span):
         module = import_module(name)
 
-        box = QGroupBox(module.MODULE_NAME[self.current_lang], self.content)
+        box = QGroupBox(module.MODULE_NAME[self.current_lang], self.tests)
+        box.setStyleSheet("QGroupBox::title { font-weight: bold; }")
         layout = QVBoxLayout(box)
 
         columns = self.get_text('test_table_head')
 
         table = QTableWidget(box)
+        table.setStyleSheet('QTableWidget { background-color: black; color: white; }')
         table.setColumnCount(len(columns))
         table.setHorizontalHeaderLabels(columns)
+        for i in range(len(columns)):
+            table.horizontalHeader().setSectionResizeMode(i, QHeaderView.Stretch)
+        table.verticalHeader().setStyleSheet('QHeaderView::section { width: 32px; }')
         table.setSelectionBehavior(QTableWidget.SelectRows)
         table.itemSelectionChanged.connect(self.on_testMethodSelected)
         layout.addWidget(table)
@@ -162,7 +212,7 @@ class MainWindow(QMainWindow, SimpleLang):
         layout.addWidget(status)
         self.run_status[name] = status
 
-        self.content_layout.addWidget(box)
+        self.tests_layout.addWidget(box, row, column, row_span, column_span)
 
     ######################################################
     # Handlers for setting a new project
@@ -201,8 +251,14 @@ class MainWindow(QMainWindow, SimpleLang):
                     item = QTableWidgetItem(self._get_text(subModuleName, subModule, testMethod_name))
                     table.setItem(row, 1, item)
                     item = QTableWidgetItem('')
+                    item.setTextAlignment(Qt.AlignCenter)
                     item.setData(Qt.UserRole, testMethod.path)
                     table.setItem(row, 2, item)
+
+                    logical_dpi = table.logicalDpiY()
+                    font_pixel = self.font_size * logical_dpi / 72
+                    row_height = int(font_pixel * 2)
+                    table.setRowHeight(row, row_height)
 
     @project.setter
     def project(self, project):
@@ -215,7 +271,6 @@ class MainWindow(QMainWindow, SimpleLang):
         # Populate the initial tree nodes. This is recursive, because
         # the tree could be of arbitrary depth.
         for testModule_name, testModule in sorted(project.items()):
-            self._setup_test_table(testModule_name)
             self._add_test_module(testModule_name, testModule)
             self.executor[testModule_name] = None
 
@@ -298,8 +353,9 @@ class MainWindow(QMainWindow, SimpleLang):
                 if item.data(Qt.UserRole) == node.path:
                     for column in range(columnCount):
                         _item = table.item(row, column)
-                        _item.setForeground(QColor(STATUS[node.status]['color']))
-                    item.setText(STATUS[node.status]['description'])
+                        _item.setBackground(QColor(STATUS[node.status]['color']))
+                    if module == 'auto':
+                        item.setText(STATUS[node.status]['description'])
                     break
 
     def on_testProgress(self, executor):
