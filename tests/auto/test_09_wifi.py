@@ -50,4 +50,4 @@ class WiFiTest(TestCase):
             if i == timeout:
                 self.fail('scan results without ap')
         except subprocess.TimeoutExpired:
-            self.fail('Scan timeout')
+            self.fail('Scan failed')
