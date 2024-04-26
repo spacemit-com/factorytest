@@ -21,6 +21,9 @@ from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
 from PyQt5.QtMultimediaWidgets import QVideoWidget
 
 import os
+import time
+import threading
+import subprocess
 from importlib import import_module
 
 from cricket.model import TestMethod, TestCase, TestModule
@@ -293,9 +296,55 @@ class MainWindow(QMainWindow, SimpleLang):
         self.media_player.setMedia(QMediaContent(QUrl(pipeline)))
         self.media_player.play()
 
+        self.audio_thread = threading.Thread(target=lambda: self.audio_loop())
+        self.audio_thread.start()
+
         self.cmd_run_all()
 
         self.root.exec_()
+
+    def _play_wav(self, device, volume, path):
+        cmd = f'amixer -c 1 cset numid=1,iface=MIXER,name="DAC Playback Volume" {volume}'
+        proc = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        print(f'Set playback volume to {volume} return {proc.returncode}')
+
+        cmd = f'aplay -D{device} -r 48000 -f S16_LE {path}'
+        proc = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        print(f'Play {path} on {device} return {proc.returncode}')
+
+    def _record_wav(self, device, volume, duration, path):
+        cmd = f'amixer -c 1 cset numid=1,iface=MIXER,name="ADC Capture Volume" {volume}'
+        proc = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        print(f'Set capture volume to {volume} return {proc.returncode}')
+
+        cmd = f'arecord -D{device} -r 48000 -f S16_LE -d {duration} {path}'
+        proc = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        print(f'Record {path} on {device} in {duration}s return {proc.returncode}')
+
+    def audio_loop(self):
+        # sleep for a while
+        time.sleep(15)
+
+        device = 'hw:1'
+        playback_volume = 160
+        record_volume = 160
+        duration = 5
+
+        res_path = '/opt/factorytest/res'
+        start_record_file = f'{res_path}/start-record.wav'
+        stop_record_file = f'{res_path}/stop-record.wav'
+        start_play_file = f'{res_path}/start-play.wav'
+        stop_play_file = f'{res_path}/stop-play.wav'
+        record_file = '/tmp/factorytest-record.wav'
+
+        while True:
+            self._play_wav(device, playback_volume, start_record_file)
+            self._record_wav(device, record_volume, duration, record_file)
+            self._play_wav(device, playback_volume, stop_record_file)
+            self._play_wav(device, playback_volume, start_play_file)
+            self._play_wav(device, playback_volume, record_file)
+            self._play_wav(device, playback_volume, stop_play_file)
+            time.sleep(duration)
 
     ######################################################
     # User commands
@@ -476,7 +525,6 @@ class MainWindow(QMainWindow, SimpleLang):
         is_stoped = True
         for executor in self.executor.values():
             if executor and executor.is_running:
-                print(executor)
                 is_stoped = False
 
         if is_stoped:
