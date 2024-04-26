@@ -3,7 +3,7 @@
 This is the "View" of the MVC world.
 """
 
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtCore import Qt, QTimer, QUrl
 from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import (
     QMainWindow,
@@ -17,6 +17,8 @@ from PyQt5.QtWidgets import (
     QTableWidgetItem,
     QHeaderView
 )
+from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
+from PyQt5.QtMultimediaWidgets import QVideoWidget
 
 import os
 from importlib import import_module
@@ -160,10 +162,14 @@ class MainWindow(QMainWindow, SimpleLang):
         self._setup_test_table('auto', 0, 0, 4, 1)
         self._setup_test_table('manual', 4, 0, 3, 1)
 
-        camera_box = QGroupBox('Camera', self.tests)
+        camera_box = QGroupBox(self.get_text('camera'), self.tests)
         camera_box_layout = QVBoxLayout(camera_box)
+        video_widget = QVideoWidget(camera_box)
+        self.media_player = QMediaPlayer()
+        self.media_player.setVideoOutput(video_widget)
+        camera_box_layout.addWidget(video_widget)
 
-        audio_box = QGroupBox('Audio', self.tests)
+        audio_box = QGroupBox(self.get_text('audio'), self.tests)
         audio_box_layout = QVBoxLayout(audio_box)
 
         self.tests_layout.addWidget(camera_box, 0, 1, 4, 1)
@@ -283,6 +289,12 @@ class MainWindow(QMainWindow, SimpleLang):
     ######################################################
 
     def mainloop(self):
+        pipeline = 'gst-pipeline: spacemitsrc location=/opt/factorytest/res/camtest_sensor0_mode0.json close-dmabuf=1 ! videoconvert ! video/x-raw,format=BGRx ! autovideosink sync=0'
+        self.media_player.setMedia(QMediaContent(QUrl(pipeline)))
+        self.media_player.play()
+
+        self.cmd_run_all()
+
         self.root.exec_()
 
     ######################################################
@@ -290,11 +302,13 @@ class MainWindow(QMainWindow, SimpleLang):
     ######################################################
         
     def cmd_poweroff(self):
+        self.media_player.stop()
         self.stop()
         # self.root.quit()
         os.system('poweroff')
 
     def cmd_reboot(self):
+        self.media_player.stop()
         self.stop()
         # self.root.quit()
         os.system('reboot')

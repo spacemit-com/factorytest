@@ -13,8 +13,8 @@
                         "src_from_file": 1,
 
                         "src_path":"/tmp/cpp_case_in_data/1920x1080/",
-                        "size_width":1920,
-                        "size_height":1080,
+                        "size_width":1280,
+                        "size_height":720,
                 },
                 {
                         "name": "cpp1",
@@ -34,8 +34,8 @@
                         "enable": 1,
                         "work_mode":"online",
                         "format":"NV12",
-                        "out_width":1920,
-                        "out_height":1080,
+                        "out_width":1280,
+                        "out_height":720,
 
                         "sensor_name":"ov16a10_spm",
                         "sensor_id" : 0,
