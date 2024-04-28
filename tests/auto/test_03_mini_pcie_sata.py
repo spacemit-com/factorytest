@@ -17,5 +17,5 @@ class MiniPCIeTest(TestCase):
     }
 
     def test_read_model(self):
-        model_file = '/sys/class/scsi_device/0:0:0:0/device/model'
+        model_file = '/sys/bus/pci/devices/0002:01:00.0/ata1/host0/target0:0:0/0:0:0:0/model'
         self.assertTrue(os.path.exists(model_file))
