@@ -313,7 +313,7 @@ class MainWindow(QMainWindow, SimpleLang):
         print(f'Play {path} on {device} return {proc.returncode}')
 
     def _record_wav(self, device, volume, duration, path):
-        cmd = f'amixer -c 1 cset numid=1,iface=MIXER,name="ADC Capture Volume" {volume}'
+        cmd = f'amixer -c 1 cset numid=1,iface=MIXER,name="ADC Capture Volume" {volume},{volume}'
         proc = subprocess.run(cmd, shell=True, capture_output=True, text=True)
         print(f'Set capture volume to {volume} return {proc.returncode}')
 
@@ -326,8 +326,8 @@ class MainWindow(QMainWindow, SimpleLang):
         time.sleep(15)
 
         device = 'hw:1'
-        playback_volume = 160
-        record_volume = 160
+        playback_volume = 184
+        record_volume = 184
         duration = 5
 
         res_path = '/opt/factorytest/res'
