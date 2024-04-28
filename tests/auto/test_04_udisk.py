@@ -20,6 +20,6 @@ class UDiskTest(TestCase):
         self.assertTrue(os.path.exists(f'{u2_hub_dir}/product'))
         self.assertTrue(os.path.exists(f'{u3_hub_dir}/product'))
         self.assertTrue(os.path.exists(f'{u2_hub_dir}/2-1.1/product'))
-        self.assertTrue(os.path.exists(f'{u3_hub_dir}/2-1.3/product'))
-        self.assertTrue(os.path.exists(f'{u2_hub_dir}/3-1.2/product'))
+        self.assertTrue(os.path.exists(f'{u2_hub_dir}/2-1.3/product'))
+        self.assertTrue(os.path.exists(f'{u3_hub_dir}/3-1.2/product'))
         self.assertTrue(os.path.exists(f'{u3_hub_dir}/3-1.4/product'))
