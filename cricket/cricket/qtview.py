@@ -93,7 +93,7 @@ class MainWindow(QMainWindow, SimpleLang):
         self.setWindowTitle(self.get_text('title'))
         # self.showFullScreen()
 
-        self.font_size = 16
+        self.font_size = 14
 
         # Set up the main content for the window.
         self._setup_main_content()
