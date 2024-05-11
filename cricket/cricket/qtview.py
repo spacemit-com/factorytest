@@ -408,6 +408,12 @@ class MainWindow(QMainWindow, SimpleLang):
     def _get_eMMC_size(self):
         with open('/sys/block/mmcblk2/size', 'r') as f:
             return round(int(f.readline().strip()) / 1024 / 1024 / 2, 1)
+        
+    def _get_DDR_size(self):
+        with open('/proc/meminfo', 'r') as f:
+            for line in f.readlines():
+                if line.startswith('MemTotal:'):
+                    return round(int(line.split()[1]) / 1024 / 1024, 0)
 
     def on_nodeStatusUpdate(self, node):
         "Event handler: a node on the tree has received a status update"
@@ -426,6 +432,9 @@ class MainWindow(QMainWindow, SimpleLang):
                             item.setText(STATUS[node.status]['description'] + f' ({self._get_eMMC_size()}G)')
                         else:
                             item.setText(STATUS[node.status]['description'])
+                    elif module == 'manual':
+                        if node.path == 'manual.test_01_ddr.DDRTest.test_capacity' and node.status == TestMethod.STATUS_PASS:
+                            item.setText(f'{self._get_DDR_size()}G')
                     break
 
     def on_testProgress(self, executor):
