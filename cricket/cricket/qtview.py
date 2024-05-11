@@ -405,6 +405,10 @@ class MainWindow(QMainWindow, SimpleLang):
         # update "run selected" button enabled state
         self.set_selected_button_state()
 
+    def _get_eMMC_size(self):
+        with open('/sys/block/mmcblk2/size', 'r') as f:
+            return round(int(f.readline().strip()) / 1024 / 1024 / 2, 1)
+
     def on_nodeStatusUpdate(self, node):
         "Event handler: a node on the tree has received a status update"
         module = node.path.split('.')[0]
@@ -418,7 +422,10 @@ class MainWindow(QMainWindow, SimpleLang):
                         _item = table.item(row, column)
                         _item.setBackground(QColor(STATUS[node.status]['color']))
                     if module == 'auto':
-                        item.setText(STATUS[node.status]['description'])
+                        if node.path == 'auto.test_05_emmc.eMMCTest.test_identify' and node.status == TestMethod.STATUS_PASS:
+                            item.setText(STATUS[node.status]['description'] + f' ({self._get_eMMC_size()}G)')
+                        else:
+                            item.setText(STATUS[node.status]['description'])
                     break
 
     def on_testProgress(self, executor):
