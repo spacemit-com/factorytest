@@ -1,6 +1,8 @@
 {
     "zh": {
         "title": "工厂测试",
+        "product_name": "产品名称",
+        "fw_version": "固件版本",
         "cpu_model": "CPU型号",
         "cpu_freq": "CPU频率",
         "ddr_size": "DDR容量",
@@ -26,6 +28,8 @@
     },
     "en": {
         "title": "Factory Test",
+        "product_name": "Product name",
+        "fw_version": "FW version",
         "cpu_model": "CPU model",
         "cpu_freq": "CPU freq",
         "ddr_size": "DDR size",

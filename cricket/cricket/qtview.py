@@ -140,6 +140,12 @@ class MainWindow(QMainWindow, SimpleLang):
         ssd_size = QLabel(f'{self.get_text("ssd_size")}: {self._get_SSD_size()} GB', info)
         info_layout.addWidget(ssd_size, 0, 4)
 
+        product_name = QLabel(f'{self.get_text("product_name")}: {self._get_product_name()}', info)
+        info_layout.addWidget(product_name, 0, 5)
+
+        fw_version = QLabel(f'{self.get_text("fw_version")}: {self._get_fw_version()}', info)
+        info_layout.addWidget(fw_version, 0, 6)
+
         self.content_layout.addWidget(info)
 
         # toolbar
@@ -426,6 +432,18 @@ class MainWindow(QMainWindow, SimpleLang):
         "Event handler: a test case has been selected in the tree"
         # update "run selected" button enabled state
         self.set_selected_button_state()
+
+    def _get_fw_version(self):
+        path = '/etc/bianbu_version'
+        if os.path.exists(path):
+            with open(path, 'r') as f:
+                return f.readline().strip()
+
+    def _get_product_name(self):
+        path = '/proc/device-tree/model'
+        if os.path.exists(path):
+            with open(path, 'r') as f:
+                return f.readline().replace('spacemit', '').replace('board', '').strip()
 
     def _get_SSD_size(self):
         path = '/sys/class/nvme/nvme0/nvme0n1/size'
