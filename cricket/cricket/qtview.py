@@ -434,8 +434,10 @@ class MainWindow(QMainWindow, SimpleLang):
                 return round(int(f.readline().strip()) / 1000 / 1000 / 2, 0)
 
     def _get_eMMC_size(self):
-        with open('/sys/block/mmcblk2/size', 'r') as f:
-            return round(int(f.readline().strip()) / 1024 / 1024 / 2, 1)
+        path = '/sys/block/mmcblk2/size'
+        if os.path.exists(path):
+            with open(path, 'r') as f:
+                return round(int(f.readline().strip()) / 1000 / 1000 / 2, 1)
         
     def _get_DDR_size(self):
         with open('/proc/meminfo', 'r') as f:
@@ -465,14 +467,10 @@ class MainWindow(QMainWindow, SimpleLang):
                     for column in range(columnCount):
                         _item = table.item(row, column)
                         _item.setBackground(QColor(STATUS[node.status]['color']))
+
                     if module == 'auto':
-                        if node.path == 'auto.test_05_emmc.eMMCTest.test_identify' and node.status == TestMethod.STATUS_PASS:
-                            item.setText(STATUS[node.status]['description'] + f' ({self._get_eMMC_size()}G)')
-                        else:
-                            item.setText(STATUS[node.status]['description'])
-                    elif module == 'manual':
-                        if node.path == 'manual.test_01_ddr.DDRTest.test_capacity' and node.status == TestMethod.STATUS_PASS:
-                            item.setText(f'{self._get_DDR_size()}G')
+                        item.setText(STATUS[node.status]['description'])
+
                     break
 
     def on_testProgress(self, executor):
