@@ -1,6 +1,11 @@
 {
     "zh": {
         "title": "工厂测试",
+        "cpu_model": "CPU型号",
+        "cpu_freq": "CPU频率",
+        "ddr_size": "DDR容量",
+        "emmc_size": "eMMC容量",
+        "ssd_size": "SSD容量",
         "run_all_button": "运行",
         "run_selected_button": "运行选择",
         "stop_button": "停止",
@@ -21,6 +26,11 @@
     },
     "en": {
         "title": "Factory Test",
+        "cpu_model": "CPU model",
+        "cpu_freq": "CPU freq",
+        "ddr_size": "DDR size",
+        "emmc_size": "eMMC size",
+        "ssd_size": "SSD size",
         "run_all_button": "Run",
         "run_selected_button": "Run Selected",
         "stop_button": "Stop",

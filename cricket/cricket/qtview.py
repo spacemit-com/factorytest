@@ -10,6 +10,7 @@ from PyQt5.QtWidgets import (
     QFrame,
     QVBoxLayout,
     QGridLayout,
+    QLabel,
     QPushButton,
     QGroupBox,
     QTableWidget,
@@ -119,6 +120,27 @@ class MainWindow(QMainWindow, SimpleLang):
 
         self.content = QFrame(self)
         self.content_layout = QVBoxLayout(self.content)
+
+        # Information
+        info = QFrame(self.content)
+        info_layout = QGridLayout(info)
+
+        cpu_model = QLabel(f'{self.get_text("cpu_model")}: {self._get_CPU_model()}', info)
+        info_layout.addWidget(cpu_model, 0, 0)
+
+        cpu_freq = QLabel(f'{self.get_text("cpu_freq")}: {self._get_CPU_freq()} GHz', info)
+        info_layout.addWidget(cpu_freq, 0, 1)
+
+        ddr_size = QLabel(f'{self.get_text("ddr_size")}: {self._get_DDR_size()} GB', info)
+        info_layout.addWidget(ddr_size, 0, 2)
+
+        emmc_size = QLabel(f'{self.get_text("emmc_size")}: {self._get_eMMC_size()} GB', info)
+        info_layout.addWidget(emmc_size, 0, 3)
+
+        ssd_size = QLabel(f'{self.get_text("ssd_size")}: {self._get_SSD_size()} GB', info)
+        info_layout.addWidget(ssd_size, 0, 4)
+
+        self.content_layout.addWidget(info)
 
         # toolbar
         toolbar = QFrame(self.content)
@@ -405,6 +427,12 @@ class MainWindow(QMainWindow, SimpleLang):
         # update "run selected" button enabled state
         self.set_selected_button_state()
 
+    def _get_SSD_size(self):
+        path = '/sys/class/nvme/nvme0/nvme0n1/size'
+        if os.path.exists(path):
+            with open(path, 'r') as f:
+                return round(int(f.readline().strip()) / 1000 / 1000 / 2, 0)
+
     def _get_eMMC_size(self):
         with open('/sys/block/mmcblk2/size', 'r') as f:
             return round(int(f.readline().strip()) / 1024 / 1024 / 2, 1)
@@ -414,6 +442,16 @@ class MainWindow(QMainWindow, SimpleLang):
             for line in f.readlines():
                 if line.startswith('MemTotal:'):
                     return round(int(line.split()[1]) / 1024 / 1024, 0)
+                
+    def _get_CPU_model(self):
+        with open('/proc/cpuinfo', 'r') as f:
+            for line in f.readlines():
+                if line.startswith('model name'):
+                    return line.split(':')[1].strip()
+                
+    def _get_CPU_freq(self):
+        with open('/sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq', 'r') as f:
+            return round(int(f.readline().strip()) / 1000 / 1000, 1)
 
     def on_nodeStatusUpdate(self, node):
         "Event handler: a node on the tree has received a status update"
