@@ -482,12 +482,15 @@ class MainWindow(QMainWindow, SimpleLang):
             item = table.item(row, columnCount-1)
             if item is not None:
                 if item.data(Qt.UserRole) == node.path:
+                    if module == 'manual' and node.status == TestMethod.STATUS_PASS:
+                        item.setText('人工判断')
+                        break
+
                     for column in range(columnCount):
                         _item = table.item(row, column)
                         _item.setBackground(QColor(STATUS[node.status]['color']))
 
-                    if module == 'auto':
-                        item.setText(STATUS[node.status]['description'])
+                    item.setText(STATUS[node.status]['description'])
 
                     break
 
