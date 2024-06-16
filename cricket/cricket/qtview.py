@@ -204,8 +204,14 @@ class MainWindow(QMainWindow, SimpleLang):
         self.media_player.setVideoOutput(video_widget)
         camera_box_layout.addWidget(video_widget)
 
+        # others
         self.others_box = QGroupBox(self.get_text('others'), self.tests)
-        self.others_box_layout = QHBoxLayout(self.others_box)
+        others_box_layout = QVBoxLayout(self.others_box)
+
+        # item
+        self.others_item = QFrame(self.others_box)
+        self.others_item_layout = QHBoxLayout(self.others_item)
+        others_box_layout.addWidget(self.others_item)
 
         sn = self._get_sn()
         if sn:
@@ -274,17 +280,18 @@ class MainWindow(QMainWindow, SimpleLang):
         return QPixmap.fromImage(qt_image)
 
     def _setup_sn_qrcode(self, sn):
-        sn_qrcode = QFrame(self.others_box)
+        sn_qrcode = QFrame(self.others_item)
         sn_qrcode_layout = QVBoxLayout(sn_qrcode)
 
-        qr_label = QLabel(self.others_box)
+        qr_label = QLabel(sn_qrcode)
+        qr_label.setAlignment(Qt.AlignCenter)
         qr_label.setPixmap(self._create_qrcode(sn))
         sn_qrcode_layout.addWidget(qr_label)
 
-        sn_label = QLabel(f'{self.get_text("sn")}: {sn}', self.others_box)
+        sn_label = QLabel(f'{self.get_text("sn")}: {sn}', sn_qrcode)
         sn_qrcode_layout.addWidget(sn_label)
 
-        self.others_box_layout.addWidget(sn_qrcode)
+        self.others_item_layout.addWidget(sn_qrcode)
 
 
     ######################################################
