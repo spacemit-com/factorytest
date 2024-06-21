@@ -15,6 +15,7 @@ from PyQt5.QtWidgets import (
     QPushButton,
     QGroupBox,
     QTableWidget,
+    QAbstractItemView,
     QStatusBar,
     QTableWidgetItem,
     QHeaderView
@@ -248,6 +249,7 @@ class MainWindow(QMainWindow, SimpleLang):
 
         table = QTableWidget(box)
         table.setStyleSheet('QTableWidget { background-color: black; color: white; }')
+        table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         table.setColumnCount(len(columns))
         table.setHorizontalHeaderLabels(columns)
         for i in range(len(columns)):
