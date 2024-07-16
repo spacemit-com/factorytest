@@ -301,27 +301,27 @@ class MainWindow(QMainWindow, SimpleLang):
     def _setup_usb_frame(self, row, column, row_span, column_span):
         self.usb_frame = QFrame(self.tests)
         self.usb_frame_layout = QGridLayout(self.usb_frame)
-
-        self._add_usb_test('USB A口 (左bottom) 2.0', 0, 0,
-                           '/sys/bus/usb/devices/usb2/2-1/2-1.2/product')
-        self._add_usb_test('USB A口 (左bottom) 3.0', 1, 0,
-                           '/sys/bus/usb/devices/usb3/3-1/3-1.2/product')
         
-        self._add_usb_test('USB A口 (左top) 2.0', 0, 1,
-                           '/sys/bus/usb/devices/usb2/2-1/2-1.3/product')
-        self._add_usb_test('USB A口 (左top) 3.0', 1, 1,
-                           '/sys/bus/usb/devices/usb3/3-1/3-1.3/product')
+        self._add_usb_test('USB A口 (左上) 2.0', 0, 0,
+                           '/sys/bus/usb/devices/usb2/2-1/2-1.1/product')
+        self._add_usb_test('USB A口 (左上) 3.0', 1, 0,
+                           '/sys/bus/usb/devices/usb3/3-1/3-1.1/product')
         
-        self._add_usb_test('USB A口 (右bottom) 2.0', 0, 2,
+        self._add_usb_test('USB A口 (左下) 2.0', 0, 1,
                            '/sys/bus/usb/devices/usb2/2-1/2-1.4/product')
-        self._add_usb_test('USB A口 (右bottom) 3.0', 1, 2,
+        self._add_usb_test('USB A口 (左下) 3.0', 1, 1,
                            '/sys/bus/usb/devices/usb3/3-1/3-1.4/product')
         
-        self._add_usb_test('USB A口 (右top) 2.0', 0, 3,
-                           '/sys/bus/usb/devices/usb2/2-1/2-1.1/product')
-        self._add_usb_test('USB A口 (右top) 3.0', 1, 3,
-                           '/sys/bus/usb/devices/usb3/3-1/3-1.1/product')
+        self._add_usb_test('USB A口 (右上) 2.0', 0, 2,
+                           '/sys/bus/usb/devices/usb2/2-1/2-1.3/product')
+        self._add_usb_test('USB A口 (右上) 3.0', 1, 2,
+                           '/sys/bus/usb/devices/usb3/3-1/3-1.3/product')
 
+        self._add_usb_test('USB A口 (右下) 2.0', 0, 3,
+                           '/sys/bus/usb/devices/usb2/2-1/2-1.2/product')
+        self._add_usb_test('USB A口 (右下) 3.0', 1, 3,
+                           '/sys/bus/usb/devices/usb3/3-1/3-1.2/product')
+    
         self.tests_layout.addWidget(self.usb_frame, row, column, row_span, column_span)
     # [end] Check the usb to see if the device is inserted
 
