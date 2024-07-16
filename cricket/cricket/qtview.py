@@ -4,7 +4,7 @@ This is the "View" of the MVC world.
 """
 
 from PyQt5.QtCore import Qt, QTimer, QUrl
-from PyQt5.QtGui import QColor, QPixmap, QImage
+from PyQt5.QtGui import QColor, QPixmap, QImage, QPalette
 from PyQt5.QtWidgets import (
     QMainWindow,
     QFrame,
@@ -36,6 +36,7 @@ from cricket.model import TestMethod, TestCase, TestModule
 from cricket.executor import Executor
 from cricket.lang import SimpleLang
 
+PASS_COLOR = '#28C025'
 
 # Display constants for test status
 STATUS = {
@@ -94,6 +95,8 @@ class MainWindow(QMainWindow, SimpleLang):
         self.test_list = {}
         self.run_status = {}
         self.executor = {}
+        
+        self.usb_list = []
 
         self.root = root
         self.setWindowTitle(self.get_text('title'))
@@ -195,8 +198,9 @@ class MainWindow(QMainWindow, SimpleLang):
         self.tests = QFrame(self.content)
         self.tests_layout = QGridLayout(self.tests)
 
-        self._setup_test_table('auto', 0, 0, 4, 1)
-        self._setup_test_table('manual', 4, 0, 3, 1)
+        self._setup_test_table('auto', 0, 0, 5, 1)
+        self._setup_usb_frame(5, 0, 1, 1)
+        self._setup_test_table('manual', 6, 0, 4, 1)
 
         camera_box = QGroupBox(self.get_text('camera'), self.tests)
         camera_box_layout = QVBoxLayout(camera_box)
@@ -221,14 +225,20 @@ class MainWindow(QMainWindow, SimpleLang):
         self.tests_layout.addWidget(camera_box, 0, 1, 4, 1)
         self.tests_layout.addWidget(self.others_box, 4, 1, 3, 1)
 
-        self.tests_layout.setRowStretch(0, 4)
-        self.tests_layout.setRowStretch(1, 4)
-        self.tests_layout.setRowStretch(2, 4)
-        self.tests_layout.setRowStretch(3, 4)
+        self.tests_layout.addWidget(camera_box, 0, 1, 6, 1)
+        self.tests_layout.addWidget(self.others_box, 6, 1, 4, 1)
 
-        self.tests_layout.setRowStretch(4, 3)
-        self.tests_layout.setRowStretch(5, 3)
-        self.tests_layout.setRowStretch(6, 3)
+        self.tests_layout.setRowStretch(0, 6)
+        self.tests_layout.setRowStretch(1, 6)
+        self.tests_layout.setRowStretch(2, 6)
+        self.tests_layout.setRowStretch(3, 6)
+        self.tests_layout.setRowStretch(4, 6)
+        self.tests_layout.setRowStretch(5, 6)
+
+        self.tests_layout.setRowStretch(6, 4)
+        self.tests_layout.setRowStretch(7, 4)
+        self.tests_layout.setRowStretch(8, 4)
+        self.tests_layout.setRowStretch(9, 4)
 
         self.tests_layout.setColumnStretch(0, 1)
         self.tests_layout.setColumnStretch(1, 1)
@@ -266,6 +276,54 @@ class MainWindow(QMainWindow, SimpleLang):
         self.run_status[name] = status
 
         self.tests_layout.addWidget(box, row, column, row_span, column_span)
+
+    # [start] Check the usb to see if the device is inserted
+    def usb_loop(self, label, usb_path):
+        while True:
+            if os.path.exists(usb_path):
+                label.setPalette(QPalette(QColor(PASS_COLOR)))
+            else:
+                label.setPalette(QPalette(QColor(255, 255,255)))
+
+            time.sleep(1)
+
+    def _add_usb_test(self, text: str, row: int, column: int, path: str):
+        label = QLabel(text, self.usb_frame)
+        label.setAutoFillBackground(True)
+        label.setPalette(QPalette(QColor('white')))
+        label.setAlignment(Qt.AlignCenter)
+        self.usb_frame_layout.addWidget(label, row, column)
+        self.usb_list.append(label)
+
+        thread = threading.Thread(target=self.usb_loop, args=(label, path))
+        thread.start()
+
+    def _setup_usb_frame(self, row, column, row_span, column_span):
+        self.usb_frame = QFrame(self.tests)
+        self.usb_frame_layout = QGridLayout(self.usb_frame)
+
+        self._add_usb_test('USB A口 (左bottom) 2.0', 0, 0,
+                           '/sys/bus/usb/devices/usb2/2-1/2-1.2/product')
+        self._add_usb_test('USB A口 (左bottom) 3.0', 1, 0,
+                           '/sys/bus/usb/devices/usb3/3-1/3-1.2/product')
+        
+        self._add_usb_test('USB A口 (左top) 2.0', 0, 1,
+                           '/sys/bus/usb/devices/usb2/2-1/2-1.3/product')
+        self._add_usb_test('USB A口 (左top) 3.0', 1, 1,
+                           '/sys/bus/usb/devices/usb3/3-1/3-1.3/product')
+        
+        self._add_usb_test('USB A口 (右bottom) 2.0', 0, 2,
+                           '/sys/bus/usb/devices/usb2/2-1/2-1.4/product')
+        self._add_usb_test('USB A口 (右bottom) 3.0', 1, 2,
+                           '/sys/bus/usb/devices/usb3/3-1/3-1.4/product')
+        
+        self._add_usb_test('USB A口 (右top) 2.0', 0, 3,
+                           '/sys/bus/usb/devices/usb2/2-1/2-1.1/product')
+        self._add_usb_test('USB A口 (右top) 3.0', 1, 3,
+                           '/sys/bus/usb/devices/usb3/3-1/3-1.1/product')
+
+        self.tests_layout.addWidget(self.usb_frame, row, column, row_span, column_span)
+    # [end] Check the usb to see if the device is inserted
 
     def _create_qrcode(self, data):
         qr = qrcode.QRCode(
