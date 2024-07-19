@@ -231,7 +231,7 @@ class MainWindow(QMainWindow, SimpleLang):
         cpu_freq = QLabel(f'{self.get_text("cpu_freq")}: {self._get_CPU_freq()} GHz', info)
         info_layout.addWidget(cpu_freq, 0, 1)
         
-        self.cpu_temp = QLabel(f'{self.get_text("CPU Temp")}: {self._get_CPU_Temp()} °C', info)
+        self.cpu_temp = QLabel(f'{self.get_text("cpu_temp")}: {self._get_CPU_Temp()} °C', info)
         self._cpu_temp_timer = QTimer(self)
         self._cpu_temp_timer.timeout.connect(self.on_cpuTempUpdate)
         self._cpu_temp_timer.start(1000)  
@@ -1021,7 +1021,7 @@ class MainWindow(QMainWindow, SimpleLang):
 
     # cpu temp part
     def on_cpuTempUpdate(self):
-        self.cpu_temp.setText(f'{self.get_text("CPU Temp")}: {self._get_CPU_Temp()} °C')
+        self.cpu_temp.setText(f'{self.get_text("cpu_temp")}: {self._get_CPU_Temp()} °C')
         
     def _get_CPU_Temp(self):
         thermal_base_path = "/sys/class/thermal/"

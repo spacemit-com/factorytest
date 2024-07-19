@@ -37,7 +37,7 @@
         "wifi": "WiFi",
         "wifi_mac": "WiFi Mac",
 
-        "CPU Temp": "CPU温度"
+        "cpu_temp": "CPU温度"
     },
     "en": {
         "title": "Factory Test",
@@ -77,6 +77,6 @@
         "wifi": "WiFi",
         "wifi_mac": "WiFi Mac",
 
-        "CPU Temp": "CPU_Temp"
+        "cpu_temp": "CPU_Temp"
     }
 }
