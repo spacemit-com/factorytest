@@ -42,6 +42,7 @@ from cricket.executor import Executor
 from cricket.lang import SimpleLang
 from cricket.macro import *
 from cricket.statusview import StatusView
+from cricket.peripheraltestview import PeripheralTestWindow
 
 
 class MainWindow(QMainWindow):
@@ -68,6 +69,8 @@ class MainWindow(QMainWindow):
 
         # Set up the main content for the window.
         self._setup_main_content()
+
+        self.peripheral_test_view = PeripheralTestWindow(self)
 
         # Set up listeners for runner events.
         Executor.bind('test_status_update', self.on_executorStatusUpdate)
@@ -296,6 +299,17 @@ class MainWindow(QMainWindow):
         lcd_layout.addWidget(label_brightness)
 
         others_test_layout.addWidget(lcd_frame)
+
+        # peripheral test
+        peripheral_frame = QFrame(others_test)
+        peripheral_frame.setAutoFillBackground(True)
+        peripheral_frame.setPalette(QPalette(QColor('darkgray')))
+        peripheral_layout = QHBoxLayout(peripheral_frame)
+        self.peripheral_test_button = QPushButton(self.sl.get_text('peripheral_test'), peripheral_frame)
+        self.peripheral_test_button.setAutoFillBackground(True)
+        self.peripheral_test_button.clicked.connect(self.cmd_peripheral_test)
+        peripheral_layout.addWidget(self.peripheral_test_button)
+        others_test_layout.addWidget(peripheral_frame)
 
         # aging test
         aging_test = QFrame(others_test)
@@ -827,6 +841,11 @@ class MainWindow(QMainWindow):
             self.aging_button.setPalette(QPalette(QColor(PASS_COLOR)))
         else:
             self.aging_button.setPalette(QPalette(QColor(FAIL_COLOR)))
+
+    #
+    def cmd_peripheral_test(self):
+        self.peripheral_test_view.exec_()
+
     ######################################################
     # GUI Callbacks
     ######################################################
