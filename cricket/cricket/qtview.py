@@ -42,6 +42,7 @@ from cricket.executor import Executor
 from cricket.lang import SimpleLang
 from cricket.macro import *
 from cricket.statusview import StatusView
+from cricket.wifimacview import WifiMacView
 
 
 class MainWindow(QMainWindow):
@@ -257,7 +258,8 @@ class MainWindow(QMainWindow):
 
         self._setup_others_test()
 
-        self._setup_wifi_mac()
+        self.wifi_mac_view = WifiMacView(self.others_item)
+        self.others_item_layout.addWidget(self.wifi_mac_view)
 
         sn = self._get_sn()
         if sn:
@@ -338,12 +340,6 @@ class MainWindow(QMainWindow):
 
         self.others_item_layout.addWidget(others_test)
 
-    def _setup_wifi_mac(self):
-        mac = self._get_wifi_mac()
-        if mac:
-            self._setup_wifi_mac_qrcode(mac)
-        else:
-            QTimer.singleShot(2000, self._setup_wifi_mac)
 
     # wifi signal part
     def _setup_others_status(self):
@@ -428,20 +424,7 @@ class MainWindow(QMainWindow):
 
         self.others_item_layout.addWidget(sn_qrcode)
 
-    def _setup_wifi_mac_qrcode(self, mac):
-        mac_qrcode = QFrame(self.others_item)
-        mac_qrcode_layout = QVBoxLayout(mac_qrcode)
 
-        qr_label = QLabel(mac_qrcode)
-        qr_label.setAlignment(Qt.AlignCenter)
-        qr_label.setPixmap(self._create_qrcode(mac))
-        mac_qrcode_layout.addWidget(qr_label)
-
-        mac_label = QLabel(f'{self.sl.get_text("wifi_mac")}: {mac}', mac_qrcode)
-        mac_label.setAlignment(Qt.AlignTop | Qt.AlignHCenter)
-        mac_qrcode_layout.addWidget(mac_label)
-
-        self.others_item_layout.addWidget(mac_qrcode)
     ######################################################
     # Handlers for setting a new project
     ######################################################
@@ -835,18 +818,6 @@ class MainWindow(QMainWindow):
         "Event handler: a test case has been selected in the tree"
         # update "run selected" button enabled state
         self.set_selected_button_state()
-
-    # wifi signal part
-
-    # wifi mac part
-    def _get_wifi_mac(self):
-        cmd = 'ifconfig wlan0'
-        proc = subprocess.run(cmd, capture_output=True, text=True, shell=True, timeout=2)
-
-        for line in proc.stdout.splitlines():
-            pattern = 'HWaddr'
-            if line.find(pattern) > 0:
-                return line.split(pattern)[1].strip()
 
     def _get_sn(self):
         path = '/proc/device-tree/serial-number'
