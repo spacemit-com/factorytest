@@ -24,18 +24,19 @@ class PeripheralTestWindow(QDialog):
         self.log_manager = LoggerManager(name='PeripheralLogger')
         self.custom_logger = self.log_manager.get_logger()
 
-        self.name_dict = {'EMMC':"EMMC", "SSD":"SSD", 'TF':'TF Card'}
+        self.name_dict = {'EMMC':"EMMC", "SSD":"SSD", 'TF':'TF Card', 'FlashDrive':'U盘'}
 
-        self.th_dict = {'EMMC':50.0*0.25, 'SSD':380*0.25, 'TF':40.0*0.20}
+        self.th_dict = {'EMMC':50.0*0.25, 'SSD':380*0.25, 'TF':40.0*0.20, 'FlashDrive':50.0*0.25} # key corresponds to name
         self.size_dict = {'EMMC':'1GB'}
 
         self.test_sequence = []
         self.current_test_index = 0
 
         self.initUI()
-        self.test_sequence.append({"type":"storage", "name": "EMMC", "control":self.emmc_control, "output_file":'/dev/mmcblk2', "seek":0})
-        self.test_sequence.append({"type":"storage", "name": "SSD", "control":self.ssd_control, "output_file":'/dev/nvme0n1', "seek":0})
-        self.test_sequence.append({"type":"storage", "name": "TF", "control":self.tf_card_control, "output_file":'/dev/mmcblk0', "seek":10240})
+        self.test_sequence.append({"type":"storage", "name": "EMMC",        "control":self.emmc_control,        "output_file":'/dev/mmcblk2',   "seek":0})
+        self.test_sequence.append({"type":"storage", "name": "SSD",         "control":self.ssd_control,         "output_file":'/dev/nvme0n1',   "seek":0})
+        self.test_sequence.append({"type":"storage", "name": "TF",          "control":self.tf_card_control,     "output_file":'/dev/mmcblk0',   "seek":10240})
+        self.test_sequence.append({"type":"storage", "name": "FlashDrive",  "control":self.flash_drive_control, "output_file":'/dev/sda',       "seek":0})
 
     def initUI(self):
         font_size = 32
@@ -57,6 +58,10 @@ class PeripheralTestWindow(QDialog):
         # TF Card
         tf_card_frame, self.tf_card_control = self.gen_storage_device_testing_ui(self.name_dict['TF'], font_size=font_size)
         layout.addWidget(tf_card_frame)
+
+        # U盘
+        flash_drive_frame, self.flash_drive_control = self.gen_storage_device_testing_ui(self.name_dict['FlashDrive'], font_size=font_size)
+        layout.addWidget(flash_drive_frame)
 
          # Create a text edit box that displays the run information
         self.text_edit = QTextEdit(self)
@@ -165,7 +170,10 @@ class PeripheralTestWindow(QDialog):
             test_info = self.test_sequence[self.current_test_index]
 
             if test_info["type"] == "storage":
-                self.test_storage_wrapper(test_info["control"], test_info["name"], output_file=test_info["output_file"], seek=test_info["seek"])
+                of = test_info["output_file"]
+                if test_info["name"] == "FlashDrive":
+                    of = self.find_sda_to_sdf_devices()
+                self.test_storage_wrapper(test_info["control"], test_info["name"], output_file=of, seek=test_info["seek"])
             elif test_info["type"] == "network":
                 pass
         else:
@@ -177,7 +185,7 @@ class PeripheralTestWindow(QDialog):
     # storage function
     def test_storage_wrapper(self, storage_control, test_name, output_file='/dev/mmcblk2', seek=0):
         if storage_control[0].isChecked():
-            self.text_edit.append(f"{self.info_msg_index} : 开始测试{test_name}写入速度................")
+            self.text_edit.append(f"{self.info_msg_index} : 开始测试{self.name_dict[test_name]}写入速度................")
             self.info_msg_index += 1
             size = storage_control[1].currentText()
             size = int(size[0]) * 1024
@@ -205,7 +213,7 @@ class PeripheralTestWindow(QDialog):
             else:
                 storage_control[3].setText(f"失败")
                 storage_control[3].setStyleSheet(f"color: {FAIL_COLOR};")
-        self.text_edit.append(f"{self.info_msg_index} : {test_name}写入速度测试完成, 耗时为{time_cst}s")
+        self.text_edit.append(f"{self.info_msg_index} : {self.name_dict[test_name]}写入速度测试完成, 耗时为{time_cst}s, 返回:{ret}")
         self.info_msg_index += 1
 
         test_info = self.test_sequence[self.current_test_index]
@@ -219,6 +227,16 @@ class PeripheralTestWindow(QDialog):
          # Move to the next test item
         self.current_test_index += 1
         self.run_next_test()
+
+    def find_sda_to_sdf_devices(self):
+        try:
+            file_list = ['/dev/'+sub for sub in ['sda', 'sdb', 'sdc', 'sdd', 'sde', 'sdf']]
+            for device in file_list:
+                if os.path.exists(device):
+                    return device
+            return '/dev/noexist'
+        except Exception as e:
+            return '/dev/noexist'
 
 class StorageTestThread(QThread):
     # Defines a signal that notifies the main thread when a thread task has completed
