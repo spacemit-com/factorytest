@@ -24,9 +24,9 @@ class PeripheralTestWindow(QDialog):
         self.log_manager = LoggerManager(name='PeripheralLogger')
         self.custom_logger = self.log_manager.get_logger()
 
-        self.name_dict = {'EMMC':"EMMC", "SSD":"SSD"}
+        self.name_dict = {'EMMC':"EMMC", "SSD":"SSD", 'TF':'TF Card'}
 
-        self.th_dict = {'EMMC':50.0*0.25, 'SSD':380*0.25}
+        self.th_dict = {'EMMC':50.0*0.25, 'SSD':380*0.25, 'TF':40.0*0.20}
         self.size_dict = {'EMMC':'1GB'}
 
         self.test_sequence = []
@@ -35,7 +35,7 @@ class PeripheralTestWindow(QDialog):
         self.initUI()
         self.test_sequence.append({"type":"storage", "name": "EMMC", "control":self.emmc_control, "output_file":'/dev/mmcblk2', "seek":0})
         self.test_sequence.append({"type":"storage", "name": "SSD", "control":self.ssd_control, "output_file":'/dev/nvme0n1', "seek":0})
-
+        self.test_sequence.append({"type":"storage", "name": "TF", "control":self.tf_card_control, "output_file":'/dev/mmcblk0', "seek":10240})
 
     def initUI(self):
         font_size = 32
@@ -53,6 +53,10 @@ class PeripheralTestWindow(QDialog):
         # SSD
         ssd_frame, self.ssd_control = self.gen_storage_device_testing_ui(self.name_dict['SSD'], font_size=font_size)
         layout.addWidget(ssd_frame)
+
+        # TF Card
+        tf_card_frame, self.tf_card_control = self.gen_storage_device_testing_ui(self.name_dict['TF'], font_size=font_size)
+        layout.addWidget(tf_card_frame)
 
          # Create a text edit box that displays the run information
         self.text_edit = QTextEdit(self)
