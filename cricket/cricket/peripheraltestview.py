@@ -19,12 +19,14 @@ class PeripheralTestWindow(QDialog):
         self._parent = parent
         self.sl = SimpleLang()
 
+        self.info_msg_index = 0
+
         self.log_manager = LoggerManager(name='PeripheralLogger')
         self.custom_logger = self.log_manager.get_logger()
 
-        self.name_dict = {'EMMC':"EMMC"}
+        self.name_dict = {'EMMC':"EMMC", "SSD":"SSD"}
 
-        self.th_dict = {'EMMC':50.0*0.25}
+        self.th_dict = {'EMMC':50.0*0.25, 'SSD':380*0.25}
         self.size_dict = {'EMMC':'1GB'}
 
         self.test_sequence = []
@@ -32,6 +34,7 @@ class PeripheralTestWindow(QDialog):
 
         self.initUI()
         self.test_sequence.append({"type":"storage", "name": "EMMC", "control":self.emmc_control, "output_file":'/dev/mmcblk2', "seek":0})
+        self.test_sequence.append({"type":"storage", "name": "SSD", "control":self.ssd_control, "output_file":'/dev/nvme0n1', "seek":0})
 
 
     def initUI(self):
@@ -46,6 +49,10 @@ class PeripheralTestWindow(QDialog):
         # EMMC
         emmc_frame, self.emmc_control = self.gen_storage_device_testing_ui(self.name_dict['EMMC'], font_size=font_size)
         layout.addWidget(emmc_frame)
+
+        # SSD
+        ssd_frame, self.ssd_control = self.gen_storage_device_testing_ui(self.name_dict['SSD'], font_size=font_size)
+        layout.addWidget(ssd_frame)
 
          # Create a text edit box that displays the run information
         self.text_edit = QTextEdit(self)
@@ -145,7 +152,8 @@ class PeripheralTestWindow(QDialog):
 
     def test_all(self):
         self.test_button.setEnabled(False)
-        self.text_edit.append(f"开始测试所有项目")
+        self.text_edit.append(f"{self.info_msg_index} : 开始测试所有被勾选项目................")
+        self.info_msg_index += 1
         self.run_next_test()
 
     def run_next_test(self):
@@ -158,12 +166,15 @@ class PeripheralTestWindow(QDialog):
                 pass
         else:
             self.test_button.setEnabled(True)
-            self.text_edit.append(f"所有测试项目已完成")
+            self.text_edit.append(f"{self.info_msg_index} : 所有测试项目已完成")
+            self.info_msg_index += 1
+            self.current_test_index = 0
 
     # storage function
     def test_storage_wrapper(self, storage_control, test_name, output_file='/dev/mmcblk2', seek=0):
         if storage_control[0].isChecked():
-            self.text_edit.append(f"开始测试{test_name}写入速度")
+            self.text_edit.append(f"{self.info_msg_index} : 开始测试{test_name}写入速度................")
+            self.info_msg_index += 1
             size = storage_control[1].currentText()
             size = int(size[0]) * 1024
 
@@ -178,6 +189,7 @@ class PeripheralTestWindow(QDialog):
     def test_storage_postprocessing(self, msg, storage_control, test_name):
         ret = msg[0]
         speed = msg[1]
+        time_cst = msg[2]
         if type(ret) == str:
             storage_control[2].setText(ret)
         else:
@@ -189,7 +201,16 @@ class PeripheralTestWindow(QDialog):
             else:
                 storage_control[3].setText(f"失败")
                 storage_control[3].setStyleSheet(f"color: {FAIL_COLOR};")
-        self.text_edit.append(f"{test_name}写入速度测试完成")
+        self.text_edit.append(f"{self.info_msg_index} : {test_name}写入速度测试完成, 耗时为{time_cst}s")
+        self.info_msg_index += 1
+
+        test_info = self.test_sequence[self.current_test_index]
+        if test_info["type"] == "storage":
+            self.thread_storage.quit()
+            self.thread_storage.wait()
+            del self.thread_storage
+        elif test_info["type"] == "network":
+            pass
 
          # Move to the next test item
         self.current_test_index += 1
@@ -214,7 +235,7 @@ class StorageTestThread(QThread):
         t_period = time.time() - t_start
         speed = float(self.size)/t_period
         self.speed = round(speed, 1)
-        self.task_finished.emit([self.ret, self.speed])
+        self.task_finished.emit([self.ret, self.speed, round(t_period, 1)])
 
     def test_storage_write_speed(self, output_file, bs="1M", count=1024, seek=0):
         try:
