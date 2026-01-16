@@ -372,8 +372,11 @@ class MainWindow(QMainWindow):
         qr.make(fit=True)
 
         img = qr.make_image(fill='black', back_color='white')
-        qt_image = ImageQt(img).convertToFormat(QImage.Format_RGB32)
-        return QPixmap.fromImage(qt_image)
+        # Convert PIL Image to QImage directly
+        img = img.convert("RGBA")
+        data = img.tobytes("raw", "RGBA")
+        qimage = QImage(data, img.width, img.height, QImage.Format_RGBA8888)
+        return QPixmap.fromImage(qimage)
 
     def _setup_sn_qrcode(self, sn):
         sn_qrcode = QFrame(self.others_item)
