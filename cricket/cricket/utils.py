@@ -1,6 +1,5 @@
 from PyQt5.QtGui import QPixmap, QImage
 from PyQt5.QtCore import Qt, QTimer, QObject
-from PIL.ImageQt import ImageQt
 import os
 import qrcode
 
@@ -22,6 +21,9 @@ def create_qrcode(data):
     qr.make(fit=True)
 
     img = qr.make_image(fill='black', back_color='white')
-    qt_image = ImageQt(img).convertToFormat(QImage.Format_RGB32)
-    return QPixmap.fromImage(qt_image)
+    # Convert PIL Image to QImage
+    img = img.convert("RGBA")
+    data = img.tobytes("raw", "RGBA")
+    qimage = QImage(data, img.width, img.height, QImage.Format_RGBA8888)
+    return QPixmap.fromImage(qimage)
 

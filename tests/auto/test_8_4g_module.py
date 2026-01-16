@@ -17,7 +17,7 @@ class USB4GModuleTest(TestCase):
     }
 
     def test_read_product(self):
-        product_file = '/sys/devices/platform/soc/c0980100.ehci1/usb1/1-1/product'
+        product_file = '/sys/devices/platform/soc/81400000.usb3/xhci-hcd.1.auto/usb2/2-1/product'
         self.assertTrue(os.path.exists(product_file))
 
         try:

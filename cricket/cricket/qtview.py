@@ -25,11 +25,9 @@ from PyQt5.QtWidgets import (
     QHeaderView,
     QSlider
 )
-from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
-from PyQt5.QtMultimediaWidgets import QVideoWidget
 
 import qrcode
-from PIL.ImageQt import ImageQt
+from PIL import ImageQt
 
 import os
 import time
@@ -131,7 +129,7 @@ class MainWindow(QMainWindow):
         # tests
         # -------------------
         # |        |        |
-        # | auto   | camera |
+        # | auto   |        |
         # |        |        |
         # -------------------
         # | manual | others |
@@ -144,17 +142,9 @@ class MainWindow(QMainWindow):
         self._setup_usb_frame(5, 0, 1, 1)
         self._setup_test_table('manual', 6, 0, 4, 1)
 
-        camera_box = QGroupBox(self.sl.get_text('camera'), self.tests)
-        camera_box_layout = QVBoxLayout(camera_box)
-        video_widget = QVideoWidget(camera_box)
-        self.media_player = QMediaPlayer()
-        self.media_player.setVideoOutput(video_widget)
-        camera_box_layout.addWidget(video_widget)
-
         # others
         self._setup_others()
 
-        self.tests_layout.addWidget(camera_box, 0, 1, 6, 1)
         self.tests_layout.addWidget(self.others_box, 6, 1, 4, 1)
 
         self.tests_layout.setRowStretch(0, 6)
@@ -196,20 +186,17 @@ class MainWindow(QMainWindow):
         ddr_size = QLabel(f'{self.sl.get_text("ddr_size")}: {self._get_DDR_size()} GB', info)
         info_layout.addWidget(ddr_size, 0, 3)
 
-        emmc_size = QLabel(f'{self.sl.get_text("emmc_size")}: {self._get_eMMC_size()} GB', info)
-        info_layout.addWidget(emmc_size, 0, 4)
+        ufs_size = QLabel(f'{self.sl.get_text("ufs_size")}: {self._get_UFS_size()} GB', info)
+        info_layout.addWidget(ufs_size, 0, 4)
 
         ssd_size = QLabel(f'{self.sl.get_text("ssd_size")}: {self._get_SSD_size()} GB', info)
         info_layout.addWidget(ssd_size, 0, 5)
 
-        self.hdmi_model = QLabel(f'{self.sl.get_text("hdmi_model")}: None', info)
-        info_layout.addWidget(self.hdmi_model, 0, 6)
-
         product_name = QLabel(f'{self.sl.get_text("product_name")}: {self._get_product_name()}', info)
-        info_layout.addWidget(product_name, 0, 7)
+        info_layout.addWidget(product_name, 0, 6)
 
         fw_version = QLabel(f'{self.sl.get_text("fw_version")}: {self._get_fw_version()}', info)
-        info_layout.addWidget(fw_version, 0, 8)
+        info_layout.addWidget(fw_version, 0, 7)
 
         self.content_layout.addWidget(info)
 
@@ -262,45 +249,18 @@ class MainWindow(QMainWindow):
         self._setup_others_test()
 
         self.wifi_mac_view = WifiMacView(self.others_item)
+        self.wifi_mac_view.setFixedWidth(200)
         self.others_item_layout.addWidget(self.wifi_mac_view)
 
         sn = self._get_sn()
         if sn:
             self._setup_sn_qrcode(sn)
 
+        self.others_item_layout.addStretch()
+
     def _setup_others_test(self):
         others_test = QFrame(self.others_item)
         others_test_layout = QVBoxLayout(others_test)
-
-        # lcd
-        lcd_frame = QFrame(others_test)
-        lcd_frame.setAutoFillBackground(True)
-        lcd_frame.setPalette(QPalette(QColor('darkgray')))
-        lcd_layout = QHBoxLayout(lcd_frame)
-
-        # lcd_button = QPushButton(self.get_text('lcd'), lcd_frame)
-        # lcd_button.clicked.connect(self.cmd_lcd)
-        # lcd_layout.addWidget(lcd_button)
-
-        # lcd backlight
-        backlight_label = QLabel(self.sl.get_text('lcd_backlight')+" :", lcd_frame)
-        backlight_label.setAlignment( Qt.AlignVCenter)
-        lcd_layout.addWidget(backlight_label)
-
-        # Create a slider
-        lcd_slider = QSlider(Qt.Horizontal, lcd_frame)
-        lcd_slider.setRange(0, 255)
-        lcd_slider.setValue(128)
-        lcd_slider.valueChanged.connect(self.set_brightness)
-        lcd_layout.addWidget(lcd_slider)
-
-        label_brightness = QLabel("128", lcd_frame)
-        label_brightness.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
-        label_brightness.setFixedWidth(24)
-        lcd_slider.valueChanged.connect(lambda value: label_brightness.setText(str(value)))
-        lcd_layout.addWidget(label_brightness)
-
-        others_test_layout.addWidget(lcd_frame)
 
         # peripheral test
         peripheral_frame = QFrame(others_test)
@@ -387,24 +347,16 @@ class MainWindow(QMainWindow):
         self.usb_frame_layout = QGridLayout(self.usb_frame)
 
         self._add_usb_test('USB A口 (左上) 2.0', 0, 0,
-                           '/sys/bus/usb/devices/usb2/2-1/2-1.1/product')
-        self._add_usb_test('USB A口 (左上) 3.0', 1, 0,
-                           '/sys/bus/usb/devices/usb3/3-1/3-1.1/product')
+                           '/sys/bus/usb/devices/usb1/1-1/1-1.1//product')
 
-        self._add_usb_test('USB A口 (左下) 2.0', 0, 1,
-                           '/sys/bus/usb/devices/usb2/2-1/2-1.4/product')
-        self._add_usb_test('USB A口 (左下) 3.0', 1, 1,
-                           '/sys/bus/usb/devices/usb3/3-1/3-1.4/product')
+        self._add_usb_test('USB A口 (左下) 2.0', 1, 0,
+                           '/sys/bus/usb/devices/usb1/1-1/1-1.2/product')
 
-        self._add_usb_test('USB A口 (右上) 2.0', 0, 2,
-                           '/sys/bus/usb/devices/usb2/2-1/2-1.3/product')
-        self._add_usb_test('USB A口 (右上) 3.0', 1, 2,
-                           '/sys/bus/usb/devices/usb3/3-1/3-1.3/product')
+        self._add_usb_test('USB A口 (右上) 2.0', 0, 1,
+                           '/sys/bus/usb/devices/usb1/1-1/1-1.3/product')
 
-        self._add_usb_test('USB A口 (右下) 2.0', 0, 3,
-                           '/sys/bus/usb/devices/usb2/2-1/2-1.2/product')
-        self._add_usb_test('USB A口 (右下) 3.0', 1, 3,
-                           '/sys/bus/usb/devices/usb3/3-1/3-1.2/product')
+        self._add_usb_test('USB A口 (右下) 2.0', 1, 1,
+                           '/sys/bus/usb/devices/usb1/1-1/1-1.4/product')
 
         self.tests_layout.addWidget(self.usb_frame, row, column, row_span, column_span)
     # [end] Check the usb to see if the device is inserted
@@ -508,10 +460,6 @@ class MainWindow(QMainWindow):
     ######################################################
 
     def mainloop(self):
-        pipeline = 'gst-pipeline: spacemitsrc location=/opt/factorytest/res/camtest_sensor0_mode0.json close-dmabuf=1 ! videoconvert ! video/x-raw,format=BGRx ! autovideosink sync=0'
-        self.media_player.setMedia(QMediaContent(QUrl(pipeline)))
-        self.media_player.play()
-
         self.hdmi_thread = threading.Thread(target=self.hdmi_loop)
         self.hdmi_thread.start()
 
@@ -523,26 +471,8 @@ class MainWindow(QMainWindow):
         self.root.exec_()
 
     def hdmi_loop(self):
-        card = '/sys/class/drm/card2-HDMI-A-1'
-        if os.path.exists(card):
-            while True:
-                with open(f'{card}/status', 'r') as f:
-                    status = f.readline().strip()
-                    if status == 'connected':
-                        break
-
-                time.sleep(1)
-
-            cmd = f'cat {card}/edid | edid-decode'
-            edid_proc = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-            for line in edid_proc.stdout.splitlines():
-                if line.strip().startswith('Manufacturer'):
-                    manufacturer = line.strip().split(':')[1].strip()
-
-                if line.strip().startswith('Model'):
-                    model = line.strip().split(':')[1].strip()
-
-            self.hdmi_model.setText(f'{self.sl.get_text("hdmi_model")}: {manufacturer} {model}')
+        pass
+        # HDMI detection removed
 
     def _play_wav(self, device, volume, path):
         cmd = f'amixer -c 1 cset numid=1,iface=MIXER,name="DAC Playback Volume" {volume}'
@@ -617,13 +547,11 @@ class MainWindow(QMainWindow):
     #     self.update_lcd_color()
 
     def cmd_poweroff(self):
-        self.media_player.stop()
         self.stop()
         # self.root.quit()
         os.system('poweroff')
 
     def cmd_reboot(self):
-        self.media_player.stop()
         self.stop()
         # self.root.quit()
         os.system('reboot')
@@ -687,7 +615,7 @@ class MainWindow(QMainWindow):
 
         if self.cpu_aging.isChecked():
             print('start cpu aging test')
-            cmd = 'stress-ng --cpu 4 --cpu-method all --cpu-load 50 --metrics-brief'
+            cmd = 'stress-ng --cpu 8 --cpu-method all --cpu-load 50 --metrics-brief'
             self.cpu_aging_proc = subprocess.Popen(cmd, shell=True,
                                                    start_new_session= True,
                                                    stdout=subprocess.PIPE,
@@ -861,12 +789,14 @@ class MainWindow(QMainWindow):
         if os.path.exists(path):
             with open(path, 'r') as f:
                 return round(int(f.readline().strip()) / 1000 / 1000 / 2, 0)
+        return 0
 
-    def _get_eMMC_size(self):
-        path = '/sys/block/mmcblk2/size'
+    def _get_UFS_size(self):
+        path = '/sys/class/block/sda/size'
         if os.path.exists(path):
             with open(path, 'r') as f:
                 return round(int(f.readline().strip()) / 1000 / 1000 / 2, 1)
+        return 0
 
     def _get_DDR_size(self):
         with open('/proc/meminfo', 'r') as f:
@@ -875,13 +805,23 @@ class MainWindow(QMainWindow):
                     return round(int(line.split()[1]) / 1024 / 1024, 0)
 
     def _get_CPU_model(self):
+        cpu_models = []
         with open('/proc/cpuinfo', 'r') as f:
             for line in f.readlines():
                 if line.startswith('model name'):
-                    return line.split(':')[1].strip()
+                    model = line.split(':')[1].strip()
+                    if model not in cpu_models:
+                        cpu_models.append(model)
+        
+        if len(cpu_models) == 1:
+            return cpu_models[0]
+        elif len(cpu_models) > 1:
+            return ' + '.join(cpu_models)
+        else:
+            return 'Unknown'
 
     def _get_CPU_freq(self):
-        with open('/sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq', 'r') as f:
+        with open('/sys/devices/system/cpu/cpufreq/policy0/scaling_cur_freq', 'r') as f:
             return round(int(f.readline().strip()) / 1000 / 1000, 1)
 
     # cpu temp part
@@ -889,29 +829,15 @@ class MainWindow(QMainWindow):
         self.cpu_temp.setText(f'{self.sl.get_text("cpu_temp")}: {self._get_CPU_Temp()} °C')
 
     def _get_CPU_Temp(self):
-        thermal_base_path = "/sys/class/thermal/"
+        temp_path = "/sys/class/thermal/thermal_zone0/temp"
         ret = "None"
 
         try:
-            # Traverse the thermal_zone* directory
-            for zone in os.listdir(thermal_base_path):
-                zone_path = os.path.join(thermal_base_path, zone)
-                type_path = os.path.join(zone_path, "type")
-
-                # Check whether the type file exists
-                if os.path.isfile(type_path):
-                    with open(type_path, 'r') as type_file:
-                        type_content = type_file.read().strip()
-
-                        # Check whether the type file content matches
-                        if type_content == "cluster0_thermal":
-                            temp_path = os.path.join(zone_path, "temp")
-
-                            if os.path.isfile(temp_path):
-                                with open(temp_path, 'r') as temp_file:
-                                    temp_content = temp_file.read().strip()
-                                    temp_content = int(temp_content)//1000
-                                    ret = str(temp_content)
+            if os.path.isfile(temp_path):
+                with open(temp_path, 'r') as temp_file:
+                    temp_content = temp_file.read().strip()
+                    temp_content = int(temp_content) // 1000
+                    ret = str(temp_content)
         except Exception as e:
             print(f"An error occurred when getting cpu temperature: {e}")
 

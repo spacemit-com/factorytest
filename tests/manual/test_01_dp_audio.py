@@ -2,19 +2,19 @@ from unittest import TestCase
 
 import subprocess
 
-class HDMIAudioTest(TestCase):
+class DPAudioTest(TestCase):
     LANGUAGES = {
         'zh': {
-            'HDMIAudioTest': 'HDMI Audio',
-            'test_hdmi_auido': '播放一段音乐'
+            'DPAudioTest': 'DP Audio',
+            'test_dp_audio': '播放一段音乐'
         },
         'en': {
-            'HDMIAudioTest': 'HDMI Audio',
-            'test_hdmi_auido': 'Play a piece of music'
+            'DPAudioTest': 'DP Audio',
+            'test_dp_audio': 'Play a piece of music'
         }
     }
 
-    def test_hdmi_auido(self):
+    def test_dp_audio(self):
         try:
             music_file = '/opt/factorytest/res/canon.wav'
             cmd = f'aplay -Dhw:0,0 -r 48000 -f S16_LE {music_file}'

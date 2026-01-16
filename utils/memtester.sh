@@ -1,6 +1,6 @@
 #!/bin/bash
 
-test_size=100M
+test_size=1G
 test_loop=1
 
 while true

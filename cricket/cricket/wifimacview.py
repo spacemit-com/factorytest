@@ -21,18 +21,20 @@ class WifiMacView(QFrame):
             QTimer.singleShot(2000, self.setup_wifi_mac_with_ui)
 
     def _get_wifi_mac(self):
-        cmd = 'ifconfig wlan0'
-        proc = subprocess.run(cmd, capture_output=True, text=True, shell=True, timeout=1)
+        for ifname in ['wlP4p1s0', 'wlan0']:
+            cmd = f'ifconfig {ifname}'
+            try:
+                proc = subprocess.run(cmd, capture_output=True, text=True, shell=True, timeout=1)
+                text = proc.stdout
+                pattern = r"(?:HWaddr|ether)\s+([0-9A-Fa-f:]{17})"
 
-        text = proc.stdout
-        pattern = r"HWaddr\s+([0-9A-Fa-f:]{17})"
-
-        match = re.search(pattern, text)
-        if match:
-            mac_address = match.group(1)
-            return mac_address
-        else:
-            return None
+                match = re.search(pattern, text)
+                if match:
+                    mac_address = match.group(1)
+                    return mac_address
+            except:
+                continue
+        return None
 
     def _setup_wifi_mac_qrcode(self, mac):
         mac_qrcode_layout = QVBoxLayout(self)

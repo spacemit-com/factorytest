@@ -24,19 +24,17 @@ class PeripheralTestWindow(QDialog):
         self.log_manager = LoggerManager(name='PeripheralLogger')
         self.custom_logger = self.log_manager.get_logger()
 
-        self.name_dict = {'EMMC':"EMMC", "SSD":"SSD", 'TF':'TF Card', 'FlashDrive':'U盘'}
+        self.name_dict = {"SSD":"SSD", 'UFS':'UFS', 'FlashDrive':'U盘'}
 
-        self.th_dict = {'EMMC':50.0*0.25, 'SSD':380*0.25, 'TF':40.0*0.20, 'FlashDrive':50.0*0.25} # key corresponds to name
-        self.size_dict = {'EMMC':'1GB'}
+        self.th_dict = {'SSD':380*0.25, 'UFS':380*0.25, 'FlashDrive':50.0*0.25} # key corresponds to name
 
         self.test_sequence = []
         self.current_test_index = 0
 
         self.initUI()
-        self.test_sequence.append({"type":"storage", "name": "EMMC",        "control":self.emmc_control,        "output_file":'/dev/mmcblk2',   "seek":0})
         self.test_sequence.append({"type":"storage", "name": "SSD",         "control":self.ssd_control,         "output_file":'/dev/nvme0n1',   "seek":0})
-        self.test_sequence.append({"type":"storage", "name": "TF",          "control":self.tf_card_control,     "output_file":'/dev/mmcblk0',   "seek":10240})
-        self.test_sequence.append({"type":"storage", "name": "FlashDrive",  "control":self.flash_drive_control, "output_file":'/dev/sda',       "seek":0})
+        self.test_sequence.append({"type":"storage", "name": "UFS",         "control":self.ufs_control,         "output_file":'/dev/sda',       "seek":0})
+        self.test_sequence.append({"type":"storage", "name": "FlashDrive",  "control":self.flash_drive_control, "output_file":'/dev/sdb',       "seek":0})
 
     def initUI(self):
         font_size = 32
@@ -47,17 +45,13 @@ class PeripheralTestWindow(QDialog):
         self.setLayout(layout)
 
         # frame, [check_box, commbox, speed_show, result_show]
-        # EMMC
-        emmc_frame, self.emmc_control = self.gen_storage_device_testing_ui(self.name_dict['EMMC'], font_size=font_size)
-        layout.addWidget(emmc_frame)
-
         # SSD
         ssd_frame, self.ssd_control = self.gen_storage_device_testing_ui(self.name_dict['SSD'], font_size=font_size)
         layout.addWidget(ssd_frame)
 
-        # TF Card
-        tf_card_frame, self.tf_card_control = self.gen_storage_device_testing_ui(self.name_dict['TF'], font_size=font_size)
-        layout.addWidget(tf_card_frame)
+        # UFS
+        ufs_frame, self.ufs_control = self.gen_storage_device_testing_ui(self.name_dict['UFS'], font_size=font_size)
+        layout.addWidget(ufs_frame)
 
         # U盘
         flash_drive_frame, self.flash_drive_control = self.gen_storage_device_testing_ui(self.name_dict['FlashDrive'], font_size=font_size)
@@ -172,7 +166,7 @@ class PeripheralTestWindow(QDialog):
             if test_info["type"] == "storage":
                 of = test_info["output_file"]
                 if test_info["name"] == "FlashDrive":
-                    of = self.find_sda_to_sdf_devices()
+                    of = self.find_sdb_to_sdf_devices()
                 self.test_storage_wrapper(test_info["control"], test_info["name"], output_file=of, seek=test_info["seek"])
             elif test_info["type"] == "network":
                 pass
@@ -228,9 +222,9 @@ class PeripheralTestWindow(QDialog):
         self.current_test_index += 1
         self.run_next_test()
 
-    def find_sda_to_sdf_devices(self):
+    def find_sdb_to_sdf_devices(self):
         try:
-            file_list = ['/dev/'+sub for sub in ['sda', 'sdb', 'sdc', 'sdd', 'sde', 'sdf']]
+            file_list = ['/dev/'+sub for sub in ['sdd', 'sde', 'sdf']]
             for device in file_list:
                 if os.path.exists(device):
                     return device

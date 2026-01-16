@@ -54,9 +54,9 @@ class WifiSignalView(QFrame):
         self.on_wifiStatusUpdate()
 
     def on_wifiStatusUpdate(self):
-        interface = 'wlan0'
+        interface = 'wlP4p1s0'
         status = self.check_interface_status(interface)
-        wifi_module_name = '8852bs'
+        wifi_module_name = '8852be'
         kernel_module_wifi_status = self.check_module_loaded(wifi_module_name)
         wpa_supplicant_status = self.check_process_running('wpa_supplicant')
         if status and kernel_module_wifi_status and wpa_supplicant_status:
