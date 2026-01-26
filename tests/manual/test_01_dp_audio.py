@@ -17,7 +17,7 @@ class DPAudioTest(TestCase):
     def test_dp_audio(self):
         try:
             music_file = '/opt/factorytest/res/canon.wav'
-            cmd = f'aplay -Dhw:1,0 -r 48000 -f S16_LE {music_file}'
+            cmd = f'aplay -Dhw:0,0 -r 48000 -f S16_LE {music_file}'
             proc = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE,
                                               stderr=subprocess.PIPE)
         except:
