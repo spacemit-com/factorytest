@@ -478,20 +478,20 @@ class MainWindow(QMainWindow):
         # HDMI detection removed
 
     def _play_wav(self, device, volume, path):
-        cmd = f'amixer -c 1 cset numid=1,iface=MIXER,name="DAC Playback Volume" {volume}'
+        cmd = f'amixer -c 0 cset numid=1,iface=MIXER,name="DAC Playback Volume" {volume}'
         proc = subprocess.run(cmd, shell=True, capture_output=True, text=True)
         # print(f'Set playback volume to {volume} return {proc.returncode}')
 
-        cmd = f'aplay -D{device} -r 48000 -f S16_LE {path}'
+        cmd = f'aplay -D{device} -r 48000 -f S16_LE {path} -c 2'
         proc = subprocess.run(cmd, shell=True, capture_output=True, text=True)
         # print(f'Play {path} on {device} return {proc.returncode}')
 
     def _record_wav(self, device, volume, duration, path):
-        cmd = f'amixer -c 1 cset numid=1,iface=MIXER,name="ADC Capture Volume" {volume},{volume}'
+        cmd = f'amixer -c 0 cset numid=1,iface=MIXER,name="ADC Capture Volume" {volume},{volume}'
         proc = subprocess.run(cmd, shell=True, capture_output=True, text=True)
         # print(f'Set capture volume to {volume} return {proc.returncode}')
 
-        cmd = f'arecord -D{device} -r 48000 -f S16_LE -d {duration} {path}'
+        cmd = f'arecord -D{device} -r 48000 -f S16_LE -d {duration} {path} -c 2'
         proc = subprocess.run(cmd, shell=True, capture_output=True, text=True)
         # print(f'Record {path} on {device} in {duration}s return {proc.returncode}')
 
@@ -499,7 +499,7 @@ class MainWindow(QMainWindow):
         # sleep for a while
         time.sleep(15)
 
-        device = 'hw:1'
+        device = 'hw:0'
         playback_volume = 184
         record_volume = 184
         duration = 5
