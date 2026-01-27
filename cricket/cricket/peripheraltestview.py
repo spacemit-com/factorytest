@@ -32,8 +32,8 @@ class PeripheralTestWindow(QDialog):
         self.current_test_index = 0
 
         self.initUI()
-        self.test_sequence.append({"type":"storage", "name": "SSD",         "control":self.ssd_control,         "output_file":'/dev/nvme0n1',   "seek":0})
-        self.test_sequence.append({"type":"storage", "name": "UFS",         "control":self.ufs_control,         "output_file":'/dev/sda',       "seek":0})
+        self.test_sequence.append({"type":"storage", "name": "SSD",         "control":self.ssd_control,         "output_file":'/dev/nvme0n1',   "seek":10240})
+        self.test_sequence.append({"type":"storage", "name": "UFS",         "control":self.ufs_control,         "output_file":'/dev/sda',       "seek":10240})
         self.test_sequence.append({"type":"storage", "name": "FlashDrive",  "control":self.flash_drive_control, "output_file":'/dev/sdb',       "seek":0})
 
     def initUI(self):
@@ -43,6 +43,12 @@ class PeripheralTestWindow(QDialog):
         self.setWindowTitle('Peripheral Test')
         layout = QVBoxLayout()
         self.setLayout(layout)
+
+        # Warning message
+        warning_label = QLabel('外设性能测试会破坏数据，操作前请保存数据', self)
+        warning_label.setAlignment(Qt.AlignCenter)
+        warning_label.setStyleSheet(f"font-size: {font_size}px; color: red; font-weight: bold; padding: 10px;")
+        layout.addWidget(warning_label)
 
         # frame, [check_box, commbox, speed_show, result_show]
         # SSD
