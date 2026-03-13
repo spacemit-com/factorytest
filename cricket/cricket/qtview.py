@@ -298,6 +298,9 @@ class MainWindow(QMainWindow):
         self.vpu_aging = QCheckBox('VPU', aging_item)
         self.vpu_aging.setChecked(True)
         aging_item_layout.addWidget(self.vpu_aging)
+        self.ai_cpu_aging = QCheckBox('AI-CPU', aging_item)
+        self.ai_cpu_aging.setChecked(True)
+        aging_item_layout.addWidget(self.ai_cpu_aging)
         aging_test_layout.addWidget(aging_item)
 
         aging_duration = QFrame(aging_test)
@@ -615,6 +618,7 @@ class MainWindow(QMainWindow):
         self.ddr_aging_proc = None
         self.gpu_aging_proc = None
         self.vpu_aging_proc = None
+        self.ai_cpu_aging_proc = None
 
         if self.cpu_aging.isChecked():
             print('start cpu aging test')
@@ -648,6 +652,14 @@ class MainWindow(QMainWindow):
                                                    stdout=subprocess.PIPE,
                                                    stderr=subprocess.PIPE)
 
+        if self.ai_cpu_aging.isChecked():
+            print('start ai-cpu aging test')
+            cmd = '/opt/factorytest/utils/stress_ng_ai_cpu.sh stress-ng --cpu 8 --cpu-method all --cpu-load 50 --metrics-brief'
+            self.ai_cpu_aging_proc = subprocess.Popen(cmd, shell=True,
+                                                      start_new_session=True,
+                                                      stdout=subprocess.PIPE,
+                                                      stderr=subprocess.PIPE)
+
     def on_agingTestUpdate(self):
         self.aging_elapse += 1
         self.aging_dialog.setValue(self.aging_elapse)
@@ -680,6 +692,13 @@ class MainWindow(QMainWindow):
                     print('vpu aging test fail')
                     error_modules.append('VPU')
                 self.vpu_aging_proc = None
+
+        if self.ai_cpu_aging.isChecked():
+            if self.ai_cpu_aging_proc and self.ai_cpu_aging_proc.poll():
+                if self.ai_cpu_aging_proc.returncode != 0:
+                    print('ai-cpu aging test fail')
+                    error_modules.append('AI-CPU')
+                self.ai_cpu_aging_proc = None
 
         if error_modules:
             error = ', '.join(error_modules) + '老化测试异常'
@@ -721,6 +740,13 @@ class MainWindow(QMainWindow):
                 self.vpu_aging_proc.kill()
                 self.vpu_aging_proc.wait()
             self.vpu_aging_proc = None
+
+        if self.ai_cpu_aging.isChecked():
+            print('stop ai-cpu aging test')
+            if self.ai_cpu_aging_proc and not self.ai_cpu_aging_proc.poll():
+                self.ai_cpu_aging_proc.kill()
+                self.ai_cpu_aging_proc.wait()
+            self.ai_cpu_aging_proc = None
 
     def cmd_aging(self):
         self.aging_duration = int(self.aging_duration_choice.currentText()) * 3600
