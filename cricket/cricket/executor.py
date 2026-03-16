@@ -11,6 +11,9 @@ except ImportError:
 from cricket.events import EventSource
 from cricket.model import TestMethod
 from cricket.pipes import PipedTestResult, PipedTestRunner
+from cricket.loggermanager import LoggerManager as _LM
+
+_logger = _LM(name='Executor').get_logger()
 
 
 def enqueue_output(out, queue):
@@ -153,11 +156,12 @@ class Executor(EventSource):
 
                     output = post.get('output')
                     if output:
-                        print(f'{self.current_test.path}:')
-                        print(output)
+                        print(output)                                               # serial
+                        _logger.info(f'{self.current_test.path}: output:\n{output}')  # file
 
                     if error:
-                        print(error)
+                        print(error)                                                # serial
+                        _logger.error(f'{self.current_test.path}: error:\n{error}')   # file
 
                     # Increase the count of executed tests
                     self.completed_count = self.completed_count + 1
@@ -173,6 +177,11 @@ class Executor(EventSource):
                         output=output,
                         error=error,
                         duration=end_time - start_time,
+                    )
+                    _logger.info(
+                        f'[{self.module}] {self.current_test.path} -> '
+                        f'{TestMethod.STATUS_LABELS.get(status, status)} '
+                        f'(duration={round(end_time - start_time, 3)}s)'
                     )
 
                     # Work out how long the suite has left to run (approximately)
@@ -240,16 +249,22 @@ class Executor(EventSource):
         # If we're not finished, requeue the event.
         if finished:
             if self.error_buffer:
-                self.emit('suite_end', module=self.module, error='\n'.join(self.error_buffer))
+                err_text = '\n'.join(self.error_buffer)
+                _logger.warning(f'[{self.module}] suite finished, stderr output:\n{err_text}')
+                self.emit('suite_end', module=self.module, error=err_text)
             else:
+                _logger.info(f'[{self.module}] suite finished successfully')
                 self.emit('suite_end', module=self.module)
             return False
 
         elif stopped:
             # Suite has stopped producing output.
             if self.error_buffer:
-                self.emit('suite_error', module=self.module, error='\n'.join(self.error_buffer))
+                err_text = '\n'.join(self.error_buffer)
+                _logger.error(f'[{self.module}] suite stopped unexpectedly:\n{err_text}')
+                self.emit('suite_error', module=self.module, error=err_text)
             else:
+                _logger.error(f'[{self.module}] suite stopped: test output ended unexpectedly')
                 self.emit('suite_error', module=self.module, error='Test output ended unexpectedly')
 
             # Suite has finished; don't requeue

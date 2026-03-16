@@ -42,6 +42,9 @@ from cricket.macro import *
 from cricket.statusview import StatusView
 from cricket.peripheraltestview import PeripheralTestWindow
 from cricket.wifimacview import WifiMacView
+from cricket.loggermanager import LoggerManager as _LM, save_dmesg_to_log
+
+_logger = _LM(name='MainWindow').get_logger()
 
 
 class MainWindow(QMainWindow):
@@ -621,7 +624,7 @@ class MainWindow(QMainWindow):
         self.ai_cpu_aging_proc = None
 
         if self.cpu_aging.isChecked():
-            print('start cpu aging test')
+            _logger.info('start cpu aging test')
             cmd = 'stress-ng --cpu 8 --cpu-method all --cpu-load 50 --metrics-brief'
             self.cpu_aging_proc = subprocess.Popen(cmd, shell=True,
                                                    start_new_session= True,
@@ -629,7 +632,7 @@ class MainWindow(QMainWindow):
                                                    stderr=subprocess.PIPE)
 
         if self.ddr_aging.isChecked():
-            print('start ddr aging test')
+            _logger.info('start ddr aging test')
             cmd = '/opt/factorytest/utils/memtester.sh'
             self.ddr_aging_proc = subprocess.Popen(cmd, shell=True,
                                                    start_new_session= True,
@@ -637,7 +640,7 @@ class MainWindow(QMainWindow):
                                                    stderr=subprocess.PIPE)
 
         if self.gpu_aging.isChecked():
-            print('start gpu aging test')
+            _logger.info('start gpu aging test')
             cmd = 'glmark2-es2-wayland --off-screen --run-forever > /tmp/glmark2.log'
             self.gpu_aging_proc = subprocess.Popen(cmd, shell=True,
                                                    start_new_session= True,
@@ -645,7 +648,7 @@ class MainWindow(QMainWindow):
                                                    stderr=subprocess.PIPE)
 
         if self.vpu_aging.isChecked():
-            print('start vpu aging tesht')
+            _logger.info('start vpu aging test')
             cmd = '/opt/factorytest/utils/vpu.sh'
             self.vpu_aging_proc = subprocess.Popen(cmd, shell=True,
                                                    start_new_session= True,
@@ -653,7 +656,7 @@ class MainWindow(QMainWindow):
                                                    stderr=subprocess.PIPE)
 
         if self.ai_cpu_aging.isChecked():
-            print('start ai-cpu aging test')
+            _logger.info('start ai-cpu aging test')
             cmd = '/opt/factorytest/utils/stress_ng_ai_cpu.sh stress-ng --cpu 8 --cpu-method all --cpu-load 50 --metrics-brief'
             self.ai_cpu_aging_proc = subprocess.Popen(cmd, shell=True,
                                                       start_new_session=True,
@@ -668,35 +671,35 @@ class MainWindow(QMainWindow):
         if self.cpu_aging.isChecked():
             if self.cpu_aging_proc and self.cpu_aging_proc.poll():
                 if self.cpu_aging_proc.returncode != 0:
-                    print('cpu aging test fail')
+                    _logger.error('cpu aging test fail')
                     error_modules.append('CPU')
                 self.cpu_aging_proc = None
 
         if self.ddr_aging.isChecked():
             if self.ddr_aging_proc and self.ddr_aging_proc.poll():
                 if self.ddr_aging_proc.returncode != 0:
-                    print('ddr aging test fail')
+                    _logger.error('ddr aging test fail')
                     error_modules.append('DDR')
                 self.ddr_aging_proc = None
 
         if self.gpu_aging.isChecked():
             if self.gpu_aging_proc and self.gpu_aging_proc.poll():
                 if self.gpu_aging_proc.returncode != 0:
-                    print('gpu aging test fail')
+                    _logger.error('gpu aging test fail')
                     error_modules.append('GPU')
                 self.gpu_aging_proc = None
 
         if self.vpu_aging.isChecked():
             if self.vpu_aging_proc and self.vpu_aging_proc.poll():
                 if self.vpu_aging_proc.returncode != 0:
-                    print('vpu aging test fail')
+                    _logger.error('vpu aging test fail')
                     error_modules.append('VPU')
                 self.vpu_aging_proc = None
 
         if self.ai_cpu_aging.isChecked():
             if self.ai_cpu_aging_proc and self.ai_cpu_aging_proc.poll():
                 if self.ai_cpu_aging_proc.returncode != 0:
-                    print('ai-cpu aging test fail')
+                    _logger.error('ai-cpu aging test fail')
                     error_modules.append('AI-CPU')
                 self.ai_cpu_aging_proc = None
 
@@ -714,35 +717,35 @@ class MainWindow(QMainWindow):
 
     def stop_aging_test(self):
         if self.cpu_aging.isChecked():
-            print('stop cpu aging test')
+            _logger.info('stop cpu aging test')
             if self.cpu_aging_proc and not self.cpu_aging_proc.poll():
                 self.cpu_aging_proc.kill()
                 self.cpu_aging_proc.wait()
             self.cpu_aging_proc = None
 
         if self.ddr_aging.isChecked():
-            print('stop ddr aging test')
+            _logger.info('stop ddr aging test')
             if self.ddr_aging_proc and not self.ddr_aging_proc.poll():
                 self.ddr_aging_proc.kill()
                 self.ddr_aging_proc.wait()
             self.ddr_aging_proc = None
 
         if self.gpu_aging.isChecked():
-            print('stop gpu aging test')
+            _logger.info('stop gpu aging test')
             if self.gpu_aging_proc and not self.gpu_aging_proc.poll():
                 self.gpu_aging_proc.kill()
                 self.gpu_aging_proc.wait()
             self.gpu_aging_proc = None
 
         if self.vpu_aging.isChecked():
-            print('stop vpu aging test')
+            _logger.info('stop vpu aging test')
             if self.vpu_aging_proc and not self.vpu_aging_proc.poll():
                 self.vpu_aging_proc.kill()
                 self.vpu_aging_proc.wait()
             self.vpu_aging_proc = None
 
         if self.ai_cpu_aging.isChecked():
-            print('stop ai-cpu aging test')
+            _logger.info('stop ai-cpu aging test')
             if self.ai_cpu_aging_proc and not self.ai_cpu_aging_proc.poll():
                 self.ai_cpu_aging_proc.kill()
                 self.ai_cpu_aging_proc.wait()
@@ -771,15 +774,17 @@ class MainWindow(QMainWindow):
         self.aging_timer.start(1000)
 
         rc = self.aging_dialog.exec_()
-        print(rc)
+        _logger.info(f'aging dialog closed with rc={rc}')
 
         self.aging_timer.stop()
 
         self.stop_aging_test()
 
         if self.aging_elapse >= self.aging_duration and self.aging_pass:
+            _logger.info('aging test PASSED')
             self.aging_button.setPalette(QPalette(QColor(PASS_COLOR)))
         else:
+            _logger.error(f'aging test FAILED (elapsed={self.aging_elapse}s, duration={self.aging_duration}s, pass={self.aging_pass})')
             self.aging_button.setPalette(QPalette(QColor(FAIL_COLOR)))
 
     #
@@ -952,36 +957,15 @@ class MainWindow(QMainWindow):
         # Display the final results
         self.run_status[module].showMessage('Finished.')
 
-        # if error:
-        #     TestErrorsDialog(self.root, error)
-
-        # if self.executor[module].any_failed:
-        #     dialog = tkMessageBox.showerror
-        # else:
-        #     dialog = tkMessageBox.showinfo
-
-        # message = ', '.join(
-        #     '%d %s' % (count, TestMethod.STATUS_LABELS[state])
-        #     for state, count in sorted(self.executor[module].result_count.items()))
-
-        # dialog(message=message or 'No tests were ran')
-
-        # Reset the running summary.
-        # self.run_summary.set('T:%(total)s P:%(pass)s F:%(fail)s E:%(error)s X:%(expected)s U:%(unexpected)s S:%(skip)s' % {
-        #     'total': self.executor.total_count,
-        #     'pass': self.executor.result_count.get(TestMethod.STATUS_PASS, 0),
-        #     'fail': self.executor.result_count.get(TestMethod.STATUS_FAIL, 0),
-        #     'error': self.executor.result_count.get(TestMethod.STATUS_ERROR, 0),
-        #     'expected': self.executor.result_count.get(TestMethod.STATUS_EXPECTED_FAIL, 0),
-        #     'unexpected': self.executor.result_count.get(TestMethod.STATUS_UNEXPECTED_SUCCESS, 0),
-        #     'skip': self.executor.result_count.get(TestMethod.STATUS_SKIP, 0),
-        # })
-
         # Drop the reference to the executor
         self.executor[module] = None
 
         # Reset the buttons
         self.reset_button_states_on_end()
+
+        # If all modules have finished, save dmesg to log
+        if all(ex is None for ex in self.executor.values()):
+            save_dmesg_to_log()
 
     def on_executorSuiteError(self, event, module, error):
         "An error occurred running the test suite."

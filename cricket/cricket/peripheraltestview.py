@@ -161,6 +161,7 @@ class PeripheralTestWindow(QDialog):
 
     def test_all(self):
         self.test_button.setEnabled(False)
+        self.custom_logger.info('peripheral test: start testing all checked items')
         self.text_edit.append(f"{self.info_msg_index} : 开始测试所有被勾选项目................")
         self.info_msg_index += 1
         self.run_next_test()
@@ -178,6 +179,7 @@ class PeripheralTestWindow(QDialog):
                 pass
         else:
             self.test_button.setEnabled(True)
+            self.custom_logger.info('peripheral test: all checked items finished')
             self.text_edit.append(f"{self.info_msg_index} : 所有测试项目已完成")
             self.info_msg_index += 1
             self.current_test_index = 0
@@ -185,6 +187,7 @@ class PeripheralTestWindow(QDialog):
     # storage function
     def test_storage_wrapper(self, storage_control, test_name, output_file='/dev/mmcblk2', seek=0):
         if storage_control[0].isChecked():
+            self.custom_logger.info(f'peripheral test: start {self.name_dict[test_name]} write-speed test, output_file={output_file}')
             self.text_edit.append(f"{self.info_msg_index} : 开始测试{self.name_dict[test_name]}写入速度................")
             self.info_msg_index += 1
             size = storage_control[1].currentText()
@@ -204,15 +207,21 @@ class PeripheralTestWindow(QDialog):
         time_cst = msg[2]
         if type(ret) == str:
             storage_control[2].setText(ret)
+            self.custom_logger.error(
+                f'peripheral test: {self.name_dict[test_name]} FAILED, duration={time_cst}s, error={ret}')
         else:
             storage_control[2].setText(f"{speed} MB/S")
             th = self.th_dict[test_name]
             if speed>=th:
                 storage_control[3].setText(f"通过")
                 storage_control[3].setStyleSheet(f"color: {PASS_COLOR};")
+                self.custom_logger.info(
+                    f'peripheral test: {self.name_dict[test_name]} PASSED, speed={speed} MB/s, threshold={th} MB/s, duration={time_cst}s')
             else:
                 storage_control[3].setText(f"失败")
                 storage_control[3].setStyleSheet(f"color: {FAIL_COLOR};")
+                self.custom_logger.error(
+                    f'peripheral test: {self.name_dict[test_name]} FAILED, speed={speed} MB/s < threshold={th} MB/s, duration={time_cst}s')
         self.text_edit.append(f"{self.info_msg_index} : {self.name_dict[test_name]}写入速度测试完成, 耗时为{time_cst}s, 返回:{ret}")
         self.info_msg_index += 1
 
