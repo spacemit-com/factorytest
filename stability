@@ -1,10 +1,87 @@
-#!/bin/bash -e
+#!/bin/bash
 
 ROOT=$(dirname "$(readlink -f "$0")")
+UTILS="$ROOT/utils"
+LOG_DIR="/root/stress"
+AGING_DURATION=$((28800))   # 8 hours in seconds
 
-pushd $ROOT > /dev/null
-./stress-ng.sh &
-./memtester.sh &
-./gpu.sh &
-./vpu.sh &
-popd > /dev/null
+mkdir -p "$LOG_DIR"
+
+# Log helper: print to stdout and append to stability.log simultaneously
+log() {
+    local msg="[$(date '+%F %T')] $*"
+    echo "$msg"
+    echo "$msg" >> "$LOG_DIR/stability.log"
+}
+
+
+# Monitor loop
+monitor_loop() {
+    echo "0" > /tmp/stability_error
+    while [ ! -f /tmp/stability_done ]; do
+        error=0
+        for name in cpu ddr ai_cpu; do
+            pid_file="/tmp/stability_${name}.pid"
+            [ -f "$pid_file" ] || continue
+            pid=$(cat "$pid_file")
+            if ! kill -0 "$pid" 2>/dev/null; then
+                log "$name process (pid=$pid) exited unexpectedly"
+                error=1
+            fi
+        done
+        echo "$error" > /tmp/stability_error
+        sleep 2
+    done
+}
+
+# ── Start aging tasks ──────────────────────────────────────────────────────────
+rm -f /tmp/stability_done
+echo "0" > /tmp/stability_error
+
+# CPU
+stress-ng --cpu 8 --cpu-method all --cpu-load 50 --metrics-brief \
+    >> "$LOG_DIR/cpu.log" 2>&1 &
+echo $! > /tmp/stability_cpu.pid
+
+# DDR
+"$UTILS/memtester.sh" >> "$LOG_DIR/ddr.log" 2>&1 &
+echo $! > /tmp/stability_ddr.pid
+
+# AI-CPU
+"$UTILS/stress_ng_ai_cpu.sh" stress-ng --cpu 8 --cpu-method all --cpu-load 50 --metrics-brief \
+    >> "$LOG_DIR/ai_cpu.log" 2>&1 &
+echo $! > /tmp/stability_ai_cpu.pid
+
+log "stability started (duration=${AGING_DURATION}s). pids: cpu=$(cat /tmp/stability_cpu.pid) ddr=$(cat /tmp/stability_ddr.pid) ai_cpu=$(cat /tmp/stability_ai_cpu.pid)"
+
+# ── Start background loops ─────────────────────────────────────────────────────
+monitor_loop &
+MONITOR_PID=$!
+
+# ── Sleep for aging duration then stop everything ──────────────────────────────
+sleep "$AGING_DURATION"
+
+log "aging duration reached, stopping tasks"
+
+# Signal blink/monitor loops to exit
+touch /tmp/stability_done
+
+# Kill aging processes (SIGKILL to ensure memtester and subprocesses are gone)
+for name in cpu ddr ai_cpu; do
+    pid_file="/tmp/stability_${name}.pid"
+    [ -f "$pid_file" ] || continue
+    pid=$(cat "$pid_file")
+    pgid=$(ps -o pgid= -p "$pid" 2>/dev/null | tr -d ' ')
+    if [ -n "$pgid" ] && [ "$pgid" != "0" ]; then
+        kill -9 -- -"$pgid" 2>/dev/null || true
+    fi
+    kill -9 "$pid" 2>/dev/null || true
+done
+# Force-kill any surviving memtester processes by name
+killall -9 memtester 2>/dev/null || true
+killall -9 memtester.sh 2>/dev/null || true
+
+# Wait for monitor loop to exit before exiting
+wait $MONITOR_PID 2>/dev/null
+
+log "stability finished"
