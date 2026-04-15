@@ -3,6 +3,7 @@
 ROOT=$(dirname "$(readlink -f "$0")")
 UTILS="$ROOT/utils"
 LOG_DIR="/root/stress"
+FIO_MOUNT_DIR="/mnt/ufs_stability_fio"
 AGING_DURATION=$((28800))   # 8 hours in seconds
 
 mkdir -p "$LOG_DIR"
@@ -15,7 +16,7 @@ SN=$(cat /proc/device-tree/serial-number 2>/dev/null | tr -d '\0')
 if [ "$1" = "-k" ]; then
     echo "stability manually stopped by user"
     touch /tmp/stability_done
-    for name in cpu ddr ai_cpu; do
+    for name in cpu ddr ai_cpu fio; do
         pid_file="/tmp/stability_${name}.pid"
         [ -f "$pid_file" ] || continue
         pid=$(cat "$pid_file")
@@ -24,13 +25,15 @@ if [ "$1" = "-k" ]; then
             kill -9 -- -"$pgid" 2>/dev/null || true
         fi
         kill -9 "$pid" 2>/dev/null || true
-        echo "manually stopped" >> "$LOG_DIR/${name}.log"
-        mv "$LOG_DIR/${name}.log" "$LOG_DIR/${SN}_${name}_FAIL.log" 2>/dev/null || true
+        echo "manually stopped" >> "$LOG_DIR/${SN}_${name}.log"
+        mv "$LOG_DIR/${SN}_${name}.log" "$LOG_DIR/${SN}_${name}_FAIL.log" 2>/dev/null || true
     done
     killall -9 memtester 2>/dev/null || true
+    umount "$FIO_MOUNT_DIR" 2>/dev/null || true
     echo "manually_stopped" >> /tmp/stability_failed
     [ -f /tmp/stability_sleep.pid ] && kill "$(cat /tmp/stability_sleep.pid)" 2>/dev/null || true
     echo "stability result: FAIL (manually stopped)"
+    ectool led power green=1
     exit 1
 fi
 
@@ -39,7 +42,7 @@ monitor_loop() {
     echo "0" > /tmp/stability_error
     while [ ! -f /tmp/stability_done ]; do
         error=0
-        for name in cpu ddr ai_cpu; do
+        for name in cpu ddr ai_cpu fio; do
             pid_file="/tmp/stability_${name}.pid"
             [ -f "$pid_file" ] || continue
             pid=$(cat "$pid_file")
@@ -63,19 +66,49 @@ echo "0" > /tmp/stability_error
 
 # CPU
 stress-ng --cpu 8 --cpu-method all --cpu-load 50 --metrics-brief \
-    >> "$LOG_DIR/cpu.log" 2>&1 &
+    >> "$LOG_DIR/${SN}_cpu.log" 2>&1 &
 echo $! > /tmp/stability_cpu.pid
 
 # DDR
-(while true; do memtester 1G 1 || exit 1; done) >> "$LOG_DIR/ddr.log" 2>&1 &
+(while true; do memtester 1G 1 || exit 1; done) >> "$LOG_DIR/${SN}_ddr.log" 2>&1 &
 echo $! > /tmp/stability_ddr.pid
 
 # AI-CPU
 "$UTILS/stress_ng_ai_cpu.sh" stress-ng --cpu 8 --cpu-method all --cpu-load 50 --metrics-brief \
-    >> "$LOG_DIR/ai_cpu.log" 2>&1 &
+    >> "$LOG_DIR/${SN}_ai_cpu.log" 2>&1 &
 echo $! > /tmp/stability_ai_cpu.pid
 
-echo "stability started (duration=${AGING_DURATION}s) SN=${SN}. pids: cpu=$(cat /tmp/stability_cpu.pid) ddr=$(cat /tmp/stability_ddr.pid) ai_cpu=$(cat /tmp/stability_ai_cpu.pid)"
+# FIO (only if /dev/sda exists)
+FIO_ENABLED=0
+if [ -b /dev/sda ]; then
+    echo "Found /dev/sda, formatting as ext4 and starting fio stress test" >> "$LOG_DIR/${SN}_fio.log"
+    mkfs.ext4 -F /dev/sda >> "$LOG_DIR/${SN}_fio.log" 2>&1
+    if [ $? -eq 0 ]; then
+        mkdir -p "$FIO_MOUNT_DIR"
+        mount /dev/sda "$FIO_MOUNT_DIR" >> "$LOG_DIR/${SN}_fio.log" 2>&1
+        if [ $? -eq 0 ]; then
+            fio --name=fio_stress \
+                --filename="$FIO_MOUNT_DIR/testfile" \
+                --rw=randrw --bs=4k --size=2G --numjobs=4 \
+                --time_based --runtime="$AGING_DURATION" \
+                --output-format=normal \
+                >> "$LOG_DIR/${SN}_fio.log" 2>&1 &
+            echo $! > /tmp/stability_fio.pid
+            FIO_ENABLED=1
+        else
+            echo "Failed to mount /dev/sda to $FIO_MOUNT_DIR, skipping fio" >> "$LOG_DIR/${SN}_fio.log"
+        fi
+    else
+        echo "Failed to format /dev/sda as ext4, skipping fio" >> "$LOG_DIR/${SN}_fio.log"
+    fi
+else
+    echo "/dev/sda not found, skipping fio stress test"
+fi
+
+FIO_PID_INFO=""
+[ "$FIO_ENABLED" = "1" ] && FIO_PID_INFO=" fio=$(cat /tmp/stability_fio.pid)"
+echo "stability started (duration=${AGING_DURATION}s) SN=${SN}. pids: cpu=$(cat /tmp/stability_cpu.pid) ddr=$(cat /tmp/stability_ddr.pid) ai_cpu=$(cat /tmp/stability_ai_cpu.pid)${FIO_PID_INFO}"
+ectool led power green=2
 
 #  Start background loops 
 monitor_loop &
@@ -98,7 +131,7 @@ touch /tmp/stability_done
 wait $MONITOR_PID 2>/dev/null
 
 # Kill aging processes 
-for name in cpu ddr ai_cpu; do
+for name in cpu ddr ai_cpu fio; do
     pid_file="/tmp/stability_${name}.pid"
     [ -f "$pid_file" ] || continue
     pid=$(cat "$pid_file")
@@ -111,6 +144,8 @@ done
 # Force-kill any surviving memtester processes by name
 killall -9 memtester 2>/dev/null || true
 killall -9 memtester.sh 2>/dev/null || true
+# Unmount fio test directory
+umount "$FIO_MOUNT_DIR" 2>/dev/null || true
 
 echo "stability finished"
 
@@ -118,8 +153,8 @@ echo "stability finished"
 failed_tests=""
 [ -f /tmp/stability_failed ] && failed_tests=$(cat /tmp/stability_failed)
 
-for name in cpu ddr ai_cpu; do
-    src="$LOG_DIR/${name}.log"
+for name in cpu ddr ai_cpu fio; do
+    src="$LOG_DIR/${SN}_${name}.log"
     [ -f "$src" ] || continue
     if echo "$failed_tests" | grep -qx "$name"; then
         result="FAIL"
@@ -132,8 +167,10 @@ done
 #  Final result 
 if [ -z "$failed_tests" ]; then
     echo "stability result: PASS"
-    exit 0
+    ectool led power green=1
+    poweroff
 else
     echo "stability result: FAIL (failed: $(echo "$failed_tests" | tr '\n' ' '))"
+    ectool led power green=1
     exit 1
 fi
