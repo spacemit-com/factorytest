@@ -167,7 +167,7 @@ done
 #  Final result 
 if [ -z "$failed_tests" ]; then
     echo "stability result: PASS"
-    ectool led power green=1
+    ectool led power green=0
     poweroff
 else
     echo "stability result: FAIL (failed: $(echo "$failed_tests" | tr '\n' ' '))"
