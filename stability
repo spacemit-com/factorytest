@@ -2,8 +2,18 @@
 
 ROOT=$(dirname "$(readlink -f "$0")")
 UTILS="$ROOT/utils"
-LOG_DIR="/root/stress"
+LOG_DIR="/mnt/var/log/factory"
 AGING_DURATION=$((28800))   # 8 hours in seconds
+
+# Mount /dev/sda3 to /mnt as ext4 (no formatting)
+if ! mountpoint -q /mnt; then
+    mount -t ext4 -o rw /dev/sda3 /mnt
+    if [ $? -ne 0 ]; then
+        echo "ERROR: failed to mount /dev/sda3 to /mnt as ext4"
+        exit 1
+    fi
+    echo "Mounted /dev/sda3 to /mnt"
+fi
 
 mkdir -p "$LOG_DIR"
 
@@ -135,6 +145,7 @@ done
 if [ -z "$failed_tests" ]; then
     echo "stability result: PASS"
     ectool led power green=0
+    umount /mnt 2>/dev/null || true
     poweroff
 else
     echo "stability result: FAIL (failed: $(echo "$failed_tests" | tr '\n' ' '))"
