@@ -1,0 +1,154 @@
+#!/bin/bash
+
+ROOT=$(dirname "$(readlink -f "$0")")
+UTILS="$ROOT/utils"
+LOG_DIR="/mnt/var/log/factory"
+AGING_DURATION=$((28800))   # 8 hours in seconds
+
+# Mount /dev/sda3 to /mnt as ext4 (no formatting)
+if ! mountpoint -q /mnt; then
+    mount -t ext4 -o rw /dev/sda3 /mnt
+    if [ $? -ne 0 ]; then
+        echo "ERROR: failed to mount /dev/sda3 to /mnt as ext4"
+        exit 1
+    fi
+    echo "Mounted /dev/sda3 to /mnt"
+fi
+
+mkdir -p "$LOG_DIR"
+
+# Get serial number
+SN=$(cat /proc/device-tree/serial-number 2>/dev/null | tr -d '\0')
+[ -z "$SN" ] && SN="unknown"
+
+# Handle -k: manual kill
+if [ "$1" = "-k" ]; then
+    echo "stability manually stopped by user"
+    touch /tmp/stability_done
+    for name in cpu ddr ai_cpu; do
+        pid_file="/tmp/stability_${name}.pid"
+        [ -f "$pid_file" ] || continue
+        pid=$(cat "$pid_file")
+        pgid=$(ps -o pgid= -p "$pid" 2>/dev/null | tr -d ' ')
+        if [ -n "$pgid" ] && [ "$pgid" != "0" ]; then
+            kill -9 -- -"$pgid" 2>/dev/null || true
+        fi
+        kill -9 "$pid" 2>/dev/null || true
+        echo "manually stopped" >> "$LOG_DIR/${SN}_${name}.log"
+        mv "$LOG_DIR/${SN}_${name}.log" "$LOG_DIR/${SN}_${name}_FAIL.log" 2>/dev/null || true
+    done
+    killall -9 memtester 2>/dev/null || true
+    echo "manually_stopped" >> /tmp/stability_failed
+    [ -f /tmp/stability_sleep.pid ] && kill "$(cat /tmp/stability_sleep.pid)" 2>/dev/null || true
+    echo "stability result: FAIL (manually stopped)"
+    ectool led power green=1
+    exit 1
+fi
+
+# Monitor loop
+monitor_loop() {
+    echo "0" > /tmp/stability_error
+    while [ ! -f /tmp/stability_done ]; do
+        error=0
+        for name in cpu ddr ai_cpu; do
+            pid_file="/tmp/stability_${name}.pid"
+            [ -f "$pid_file" ] || continue
+            pid=$(cat "$pid_file")
+            if ! kill -0 "$pid" 2>/dev/null; then
+                echo "$name process (pid=$pid) exited unexpectedly"
+                echo "$name" >> /tmp/stability_failed
+                rm -f "$pid_file"   # prevent repeated reporting
+                error=1
+                # Wake up main script to stop early
+                [ -f /tmp/stability_sleep.pid ] && kill "$(cat /tmp/stability_sleep.pid)" 2>/dev/null
+            fi
+        done
+        echo "$error" > /tmp/stability_error
+        sleep 2
+    done
+}
+
+#  Start aging tasks 
+rm -f /tmp/stability_done /tmp/stability_failed
+echo "0" > /tmp/stability_error
+
+# CPU
+stress-ng --cpu 8 --cpu-method all --cpu-load 50 --metrics-brief \
+    >> "$LOG_DIR/${SN}_cpu.log" 2>&1 &
+echo $! > /tmp/stability_cpu.pid
+
+# DDR
+(while true; do memtester 1G 1 || exit 1; done) >> "$LOG_DIR/${SN}_ddr.log" 2>&1 &
+echo $! > /tmp/stability_ddr.pid
+
+# AI-CPU
+"$UTILS/stress_ng_ai_cpu.sh" stress-ng --cpu 8 --cpu-method all --cpu-load 50 --metrics-brief \
+    >> "$LOG_DIR/${SN}_ai_cpu.log" 2>&1 &
+echo $! > /tmp/stability_ai_cpu.pid
+
+echo "stability started (duration=${AGING_DURATION}s) SN=${SN}. pids: cpu=$(cat /tmp/stability_cpu.pid) ddr=$(cat /tmp/stability_ddr.pid) ai_cpu=$(cat /tmp/stability_ai_cpu.pid)"
+ectool led power green=2
+
+#  Start background loops 
+monitor_loop &
+MONITOR_PID=$!
+
+#  Sleep for aging duration (background so monitor can wake us early) 
+sleep "$AGING_DURATION" &
+SLEEP_PID=$!
+echo $SLEEP_PID > /tmp/stability_sleep.pid
+wait $SLEEP_PID 2>/dev/null
+
+if [ ! -f /tmp/stability_failed ]; then
+    echo "aging duration reached, stopping tasks"
+else
+    echo "early stop triggered by process failure"
+fi
+
+# Signal monitor loop to exit FIRST, then wait — avoids false failure reports
+touch /tmp/stability_done
+wait $MONITOR_PID 2>/dev/null
+
+# Kill aging processes 
+for name in cpu ddr ai_cpu; do
+    pid_file="/tmp/stability_${name}.pid"
+    [ -f "$pid_file" ] || continue
+    pid=$(cat "$pid_file")
+    pgid=$(ps -o pgid= -p "$pid" 2>/dev/null | tr -d ' ')
+    if [ -n "$pgid" ] && [ "$pgid" != "0" ]; then
+        kill -9 -- -"$pgid" 2>/dev/null || true
+    fi
+    kill -9 "$pid" 2>/dev/null || true
+done
+# Force-kill any surviving memtester processes by name
+killall -9 memtester 2>/dev/null || true
+killall -9 memtester.sh 2>/dev/null || true
+
+echo "stability finished"
+
+#  Rename log files: {SN}_{name}_{PASS|FAIL}.log 
+failed_tests=""
+[ -f /tmp/stability_failed ] && failed_tests=$(cat /tmp/stability_failed)
+
+for name in cpu ddr ai_cpu; do
+    src="$LOG_DIR/${SN}_${name}.log"
+    [ -f "$src" ] || continue
+    if echo "$failed_tests" | grep -qx "$name"; then
+        result="FAIL"
+    else
+        result="PASS"
+    fi
+    mv "$src" "$LOG_DIR/${SN}_${name}_${result}.log"
+done
+
+#  Final result 
+if [ -z "$failed_tests" ]; then
+    echo "stability result: PASS"
+    ectool led power green=0
+    umount /mnt 2>/dev/null || true
+    poweroff
+else
+    echo "stability result: FAIL (failed: $(echo "$failed_tests" | tr '\n' ' '))"
+    ectool led power green=1
+    exit 1
+fi
