@@ -155,7 +155,7 @@ BR2_PACKAGE_FACTORYTEST_BOARD_<BOARD_MACRO>=y
 
 ### 在 Bianbu 上运行
 
-前提：系统已存在普通用户（假设为`bianbu`，uid 1000），Wayland 会话已启动。
+前提：系统已存在普通用户（假设为`bianbu`，uid 1000），且用户已正常进桌面。
 
 以 root 身份执行：
 
