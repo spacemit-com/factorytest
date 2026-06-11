@@ -84,7 +84,7 @@ boards/<board-name>/
 `COMPATIBLE` 从板子的`/proc/device-tree/compatible`节点读取对应字符串，`<board-name>` 必须与 `boards/` 下的目录名称保持一致，例如：
 
 ```python
-COMPATIBLE = 'spacemit, xxxx'
+COMPATIBLE = 'spacemit,<board-name>'
 BOARD_NAME = '<board-name>'
 ```
 
@@ -92,13 +92,24 @@ BOARD_NAME = '<board-name>'
 
 按照上文"测试项"规则在 `tests/auto/` 和 `tests/manual/` 下添加测试文件。
 
-如需根据运行环境区分行为Buildroot和Bianbu，从框架导入 `is_buildroot()`：
+如需根据运行环境区分行为（Buildroot 和 Bianbu），从框架导入 `is_buildroot()`：
 
 ```python
-from utils import is_buildroot
+from board_detect import is_buildroot
 ```
 
-**第四步：配置 Buildroot**
+**第四步：注册板型到 board_detect.py**
+
+在 `common/factorytest/board_detect.py` 的 `COMPATIBLE_MAP` 中新增一条映射，key 为 `/proc/device-tree/compatible` 中的实际字符串，value 为 `boards/` 下的目录名：
+
+```python
+COMPATIBLE_MAP = {
+    ...
+    'spacemit,<board-name>': '<board-name>',
+}
+```
+
+**第五步：配置 Buildroot**
 
 三者的对应关系：`<board-name>` 是 `boards/` 下的目录名，`BR2_PACKAGE_FACTORYTEST_BOARD` 的值必须与之完全一致，`<BOARD_MACRO>` 是对应的大写 kconfig 符号名（连字符替换为下划线）。构建时 `factorytest.mk` 通过 `BR2_PACKAGE_FACTORYTEST_BOARD` 拼接路径 `boards/$(BR2_PACKAGE_FACTORYTEST_BOARD)/`，三者必须严格匹配。
 
@@ -114,11 +125,11 @@ from utils import is_buildroot
    default "<board-name>"  if BR2_PACKAGE_FACTORYTEST_BOARD_<BOARD_MACRO>
    ```
 
-2. `factorytest.mk` 一般无需修改。
+2. `factorytest.mk` 无需修改，构建时自动按 `BR2_PACKAGE_FACTORYTEST_BOARD` 的值选取板型目录。
 
-**第五步：配置 Debian 打包**
+**第六步：配置 Debian 打包**
 
-需要修改以下三处，参照已有板型：
+需要修改以下三处，参照已有板型，其中 `<board-name>` 与目录名及 `BOARD_NAME` 保持一致：
 
 1. `debian/rules`：在 `BOARDS` 变量中追加 `<board-name>`：
    ```makefile
