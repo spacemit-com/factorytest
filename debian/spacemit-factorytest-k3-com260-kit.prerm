@@ -1,0 +1,5 @@
+#!/bin/sh
+set -e
+
+# Remove the entire installation directory so dpkg can cleanly uninstall
+rm -rf /opt/factorytest

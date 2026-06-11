@@ -44,8 +44,25 @@
 %:
 	dh $@
 
-# debmake generated override targets
-# Multiarch package requires library files to be installed to
-# /usr/lib/<triplet>/ .  If the build system does not support
-# $(DEB_HOST_MULTIARCH), you may need to override some targets such as
-# dh_auto_configure or dh_auto_install to use $(DEB_HOST_MULTIARCH) .
+# All supported boards — one binary package is produced per board
+BOARDS := k3-pico-itx k3-com260 k3-com260-kit k3-com260-ifx
+
+override_dh_install:
+	# Install files for each board into its own package staging directory
+	$(foreach board,$(BOARDS), \
+	    install -d debian/spacemit-factorytest-$(board)/opt/factorytest ; \
+	    cp -r boards/$(board)/cricket  debian/spacemit-factorytest-$(board)/opt/factorytest/ ; \
+	    cp -r boards/$(board)/tests    debian/spacemit-factorytest-$(board)/opt/factorytest/ ; \
+	    cp -r boards/$(board)/utils    debian/spacemit-factorytest-$(board)/opt/factorytest/ ; \
+	    install -m 755 boards/$(board)/stability debian/spacemit-factorytest-$(board)/opt/factorytest/ ; \
+	    install -m 644 boards/$(board)/board.py  debian/spacemit-factorytest-$(board)/opt/factorytest/ ; \
+	    install -d debian/spacemit-factorytest-$(board)/opt/factorytest/common/factorytest ; \
+	    cp -r common/factorytest/. debian/spacemit-factorytest-$(board)/opt/factorytest/common/factorytest/ ; \
+	    install -d debian/spacemit-factorytest-$(board)/opt/factorytest/res ; \
+	    cp -r common/res/. debian/spacemit-factorytest-$(board)/opt/factorytest/res/ ; \
+	    install -m 755 common/gpu.sh common/vpu.sh common/memtester.sh common/stress-ng.sh \
+	        debian/spacemit-factorytest-$(board)/opt/factorytest/ ; \
+	    install -m 755 gui-main debian/spacemit-factorytest-$(board)/opt/factorytest/ ; \
+	)	# Remove any stale Python bytecode caches from the staging directories
+	find debian/spacemit-factorytest-*/opt/factorytest -name '__pycache__' -type d -exec rm -rf {} + 2>/dev/null || true
+	find debian/spacemit-factorytest-*/opt/factorytest -name '*.pyc' -delete 2>/dev/null || true

@@ -1,0 +1,6 @@
+#!/bin/sh
+set -e
+
+# Remove stale Python bytecode caches before installing new files
+find /opt/factorytest -name '__pycache__' -type d -exec rm -rf {} + 2>/dev/null || true
+find /opt/factorytest -name '*.pyc' -delete 2>/dev/null || true
