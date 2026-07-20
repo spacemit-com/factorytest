@@ -1,0 +1,115 @@
+#!/bin/bash
+
+ROOT=$(dirname "$(readlink -f "$0")")
+UTILS="$ROOT/utils"
+SN=$(cat /proc/device-tree/serial-number 2>/dev/null | tr -d '\0' || echo "unknown")
+LOG_DIR="/root/stress/${SN}"
+GPIO=59
+AGING_DURATION=$((28800))   # 8 hours in seconds
+
+mkdir -p "$LOG_DIR"
+
+# Log helper: print to stdout and append to stability.log simultaneously
+log() {
+    local msg="[$(date '+%F %T')] $*"
+    echo "$msg"
+    echo "$msg" >> "$LOG_DIR/stability.log"
+}
+
+# GPIO helper
+gpio_export() {
+    echo "$GPIO" > /sys/class/gpio/export 2>/dev/null || true
+    echo out > /sys/class/gpio/gpio${GPIO}/direction
+}
+
+gpio_set() {
+    echo "$1" > /sys/class/gpio/gpio${GPIO}/value
+}
+
+# GPIO blink loop (runs in background)
+# Reads /tmp/stability_error: "0" = normal, "1" = error
+# Continues blinking after stability_done based on final error state
+blink_loop() {
+    gpio_export
+    gpio_set 0
+    while true; do
+        if [ "$(cat /tmp/stability_error 2>/dev/null)" = "1" ]; then
+            # Error: fast blink 200ms on / 200ms off
+            gpio_set 1; sleep 0.2
+            gpio_set 0; sleep 0.2
+        else
+            # Normal: 1s on / 2s off
+            gpio_set 1; sleep 1
+            gpio_set 0; sleep 2
+        fi
+    done
+}
+
+# Monitor loop
+monitor_loop() {
+    echo "0" > /tmp/stability_error
+    while [ ! -f /tmp/stability_done ]; do
+        error=0
+        for name in cpu ddr ai_cpu; do
+            pid_file="/tmp/stability_${name}.pid"
+            [ -f "$pid_file" ] || continue
+            pid=$(cat "$pid_file")
+            if ! kill -0 "$pid" 2>/dev/null; then
+                log "$name process (pid=$pid) exited unexpectedly"
+                error=1
+            fi
+        done
+        echo "$error" > /tmp/stability_error
+        sleep 2
+    done
+}
+
+# ── Start aging tasks ──────────────────────────────────────────────────────────
+rm -f /tmp/stability_done
+echo "0" > /tmp/stability_error
+
+# CPU
+stress-ng --cpu 8 --cpu-method all --cpu-load 50 --metrics-brief \
+    >> "$LOG_DIR/cpu.log" 2>&1 &
+echo $! > /tmp/stability_cpu.pid
+
+# DDR
+"$UTILS/memtester.sh" >> "$LOG_DIR/ddr.log" 2>&1 &
+echo $! > /tmp/stability_ddr.pid
+
+# AI-CPU
+"$UTILS/stress_ng_ai_cpu.sh" stress-ng --cpu 8 --cpu-method all --cpu-load 50 --metrics-brief \
+    >> "$LOG_DIR/ai_cpu.log" 2>&1 &
+echo $! > /tmp/stability_ai_cpu.pid
+
+log "stability started (duration=${AGING_DURATION}s). pids: cpu=$(cat /tmp/stability_cpu.pid) ddr=$(cat /tmp/stability_ddr.pid) ai_cpu=$(cat /tmp/stability_ai_cpu.pid)"
+
+# ── Start background loops ─────────────────────────────────────────────────────
+blink_loop &
+BLINK_PID=$!
+monitor_loop &
+MONITOR_PID=$!
+
+# ── Sleep for aging duration then stop everything ──────────────────────────────
+sleep "$AGING_DURATION"
+
+log "aging duration reached, stopping tasks"
+
+# Kill aging processes (SIGKILL to ensure memtester and subprocesses are gone)
+for name in cpu ddr ai_cpu; do
+    pid_file="/tmp/stability_${name}.pid"
+    [ -f "$pid_file" ] || continue
+    pid=$(cat "$pid_file")
+    pgid=$(ps -o pgid= -p "$pid" 2>/dev/null | tr -d ' ')
+    if [ -n "$pgid" ] && [ "$pgid" != "0" ]; then
+        kill -9 -- -"$pgid" 2>/dev/null || true
+    fi
+    kill -9 "$pid" 2>/dev/null || true
+done
+# Force-kill any surviving memtester processes by name
+killall -9 memtester 2>/dev/null || true
+killall -9 memtester.sh 2>/dev/null || true
+
+kill $MONITOR_PID 2>/dev/null
+
+log "stability finished"
