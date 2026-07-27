@@ -11,6 +11,7 @@ COMPATIBLE_MAP = {
     'spacemit,k3-com260':         'k3-com260',
     'spacemit,k3-com260-kit-v02': 'k3-com260-kit',
     'spacemit,k3-com260-ifx':     'k3-com260-ifx',
+    'spacemit,k3-slt':            'k3-slt',
 }
 
 COMPATIBLE_PATH = '/proc/device-tree/compatible'
