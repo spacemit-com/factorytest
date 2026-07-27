@@ -15,7 +15,7 @@ class EEPROMTest(TestCase):
     }
 
     def test_read(self):
-        eeprom_file = '/sys/devices/platform/soc/d4011000.i2c/i2c-1/1-0050/eeprom'
+        eeprom_file = '/sys/devices/platform/soc/d4012000.i2c/i2c-2/2-0050/eeprom'
         self.assertTrue(os.path.exists(eeprom_file))
         try:
             with open(eeprom_file, 'rb') as f:
