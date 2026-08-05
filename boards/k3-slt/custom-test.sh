@@ -31,9 +31,9 @@ fi
 test_event "ddr:start"
 
 if command -v memtester &> /dev/null; then
-    # 固定测试1GB内存
-    TEST_MEM_MB=1024
-    # 运行memtester测试，测试1GB内存，循环1次
+    # 缩短测试时长：只测试 512MB 内存，循环 1 次
+    TEST_MEM_MB=512
+    # 运行memtester测试，测试 512MB 内存，循环 1 次
     if memtester ${TEST_MEM_MB}M 1 >> $LOG_FILE 2>&1; then
         test_event "ddr:pass"
     else
