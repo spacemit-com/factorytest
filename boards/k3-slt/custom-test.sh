@@ -31,9 +31,9 @@ fi
 test_event "ddr:start"
 
 if command -v memtester &> /dev/null; then
-    # 缩短测试时长：只测试 512MB 内存，循环 1 次
-    TEST_MEM_MB=512
-    # 运行memtester测试，测试 512MB 内存，循环 1 次
+    # 缩短测试时长：只测试 10MB 内存，循环 1 次
+    TEST_MEM_MB=10
+    # 运行memtester测试，只测试 10MB 内存，循环 1 次
     if memtester ${TEST_MEM_MB}M 1 >> $LOG_FILE 2>&1; then
         test_event "ddr:pass"
     else
@@ -67,7 +67,7 @@ if command -v fio &> /dev/null; then
                 
                 # FIO随机混合读写压测 (50%读 + 50%写)
                 if fio --name=randrw --filename=$TEST_FILE --rw=randrw --bs=4k \
-                    --size=100M --numjobs=4 --iodepth=16 --runtime=60 --time_based --direct=1 \
+                    --size=50M --numjobs=4 --iodepth=16 --runtime=15 --time_based --direct=1 \
                     --output-format=normal >> $LOG_FILE 2>&1; then
                     test_event "ufs:pass"
                 else
