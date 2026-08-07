@@ -31,14 +31,29 @@ fi
 test_event "ddr:start"
 
 if command -v memtester &> /dev/null; then
-    # 缩短测试时长：只测试 10MB 内存，循环 1 次
+    # 每个进程测试 10MB 内存，循环 1 次
     TEST_MEM_MB=10
-    # 运行memtester测试，只测试 10MB 内存，循环 1 次
-    if memtester ${TEST_MEM_MB}M 1 >> $LOG_FILE 2>&1; then
+    # memtester 本身不支持多线程，并行跑 8 个独立进程由调度器分散到不同核心
+    MEMTESTER_JOBS=4
+    declare -a MEMTESTER_PIDS
+    for job in $(seq 1 $MEMTESTER_JOBS); do
+        memtester ${TEST_MEM_MB}M 1 >> "/tmp/memtester_job${job}.log" 2>&1 &
+        MEMTESTER_PIDS[$job]=$!
+    done
+
+    DDR_FAIL=0
+    for job in $(seq 1 $MEMTESTER_JOBS); do
+        if ! wait "${MEMTESTER_PIDS[$job]}"; then
+            DDR_FAIL=1
+        fi
+        cat "/tmp/memtester_job${job}.log" >> $LOG_FILE
+        rm -f "/tmp/memtester_job${job}.log"
+    done
+
+    if [ $DDR_FAIL -eq 0 ]; then
         test_event "ddr:pass"
     else
-        EXIT_CODE=$?
-        test_event "ddr:fail:memtester exit code $EXIT_CODE"
+        test_event "ddr:fail:memtester failed on one or more jobs"
     fi
 else
     test_event "ddr:fail:memtester not found"
