@@ -121,25 +121,24 @@ fi
 # 格式: ["DRM连接器名"]="UVC设备路径"
 # 注意：当只有一个采集卡时，两个 DP 共用同一个 UVC 设备（按顺序测试）
 declare -A DP_UVC_DEVICE_MAP=(
-    ["card1-DP-1"]="/dev/v4l/by-path/platform-xhci-hcd.3.auto-usb-0:1:1.0-video-index0"
-    ["card2-DP-2"]="/dev/v4l/by-path/platform-xhci-hcd.2.auto-usb-0:1:1.0-video-index0"
+    ["card1-DP-1"]="/dev/v4l/by-path/platform-xhci-hcd.3.auto-usb-0:1:1.0-video-index0" # dp0
+    ["card2-DP-2"]="/dev/v4l/by-path/platform-xhci-hcd.2.auto-usb-0:1:1.0-video-index0" # dp1
 )
 # 如果有两个采集卡，将第二个 DP 映射到第二个采集卡路径即可
 # ============================================
 
-# 函数：枚举所有 connected 的 DP 接口
-enumerate_dp_devices() {
-    local dp_list=()
-    for drm_dir in /sys/class/drm/card*-DP-*; do
-        if [ -f "$drm_dir/status" ]; then
-            STATUS=$(cat "$drm_dir/status" 2>/dev/null)
-            if [ "$STATUS" = "connected" ]; then
-                local device=$(basename "$drm_dir")
-                dp_list+=("$device")
-            fi
-        fi
-    done
-    echo "${dp_list[@]}"
+# 本板期望测试的DP接口，固定数量和顺序，必须与上面 DP_UVC_DEVICE_MAP 的 key 一一对应
+# 不再依据"当前检测到connected的接口"来决定测试范围，避免断连的DP被静默跳过
+DP_CONNECTOR_ORDER=("card1-DP-1" "card2-DP-2")
+
+# 函数：读取指定DP连接器的HPD状态，不存在则返回 not_found
+get_dp_status() {
+    local status_file="/sys/class/drm/$1/status"
+    if [ -f "$status_file" ]; then
+        cat "$status_file" 2>/dev/null
+    else
+        echo "not_found"
+    fi
 }
 
 # 函数：启动 weston 实例
@@ -176,84 +175,89 @@ start_weston_for_dp() {
 }
 
 # 主测试流程
-DP_DEVICES=($(enumerate_dp_devices))
+# 按固定的期望列表逐一测试，而不是只测试当前connected的接口，
+# 这样断连/未识别的DP会被明确判fail，不会被静默跳过
+declare -a WESTON_PIDS
 
-if [ ${#DP_DEVICES[@]} -eq 0 ]; then
-    test_event "dp:fail:no display connected"
-else
-    declare -a WESTON_PIDS
-    
-    for i in "${!DP_DEVICES[@]}"; do
-        dp_device="${DP_DEVICES[$i]}"
-        
-        # 通过静态配置查找对应 UVC 设备
-        uvc_device="${DP_UVC_DEVICE_MAP[$dp_device]}"
-        if [ -z "$uvc_device" ] || [ ! -e "$uvc_device" ]; then
-            test_event "dp${i}:fail:UVC device not found: $uvc_device"
-            continue
-        fi
-        
-        # 启动 weston
-        if ! weston_pid=$(start_weston_for_dp "$dp_device" "$i"); then
-            test_event "dp${i}:fail:weston start failed"
-            continue
-        fi
-        WESTON_PIDS[$i]=$weston_pid
-        
-        test_event "dp${i}:start"
-        
-        workdir="/opt/factorytest/res/dp_uvc_compare_${i}"
-        mkdir -p "$workdir"
-        temp_output="/tmp/dp${i}_test_output.txt"
-        
-        # 运行两次（预热 + 正式）
-        for run in 1 2; do
-            env XDG_RUNTIME_DIR=/root \
-                WAYLAND_DISPLAY="wayland-dp${i}" \
-                SDL_VIDEODRIVER=wayland \
-                python3 -u /opt/factorytest/dp_uvc_compare.py \
-                    --workdir "$workdir" \
-                    --device "$uvc_device" \
-                    --threshold 0.90 \
-                    > "$temp_output" 2>&1 &
-            
-            dp_pid=$!
-            count=0
-            while [ $count -lt 40 ]; do
-                if ! kill -0 $dp_pid 2>/dev/null; then
-                    break
-                fi
-                sleep 1
-                count=$((count + 1))
-            done
-            
-            wait $dp_pid 2>/dev/null || true
-            
-            if [ $count -eq 40 ]; then
-                kill -9 $dp_pid 2>/dev/null
-                test_event "dp${i}:fail:timeout on run $run"
-                test_event "dp${i}:end"
+for i in "${!DP_CONNECTOR_ORDER[@]}"; do
+    dp_device="${DP_CONNECTOR_ORDER[$i]}"
+
+    dp_status=$(get_dp_status "$dp_device")
+    if [ "$dp_status" != "connected" ]; then
+        test_event "dp${i}:fail:${dp_device} not connected (status=${dp_status})"
+        test_event "dp${i}:end"
+        continue
+    fi
+
+    # 通过静态配置查找对应 UVC 设备
+    uvc_device="${DP_UVC_DEVICE_MAP[$dp_device]}"
+    if [ -z "$uvc_device" ] || [ ! -e "$uvc_device" ]; then
+        test_event "dp${i}:fail:UVC device not found: $uvc_device"
+        test_event "dp${i}:end"
+        continue
+    fi
+
+    # 启动 weston
+    if ! weston_pid=$(start_weston_for_dp "$dp_device" "$i"); then
+        test_event "dp${i}:fail:weston start failed"
+        test_event "dp${i}:end"
+        continue
+    fi
+    WESTON_PIDS[$i]=$weston_pid
+
+    test_event "dp${i}:start"
+
+    workdir="/opt/factorytest/res/dp_uvc_compare_${i}"
+    mkdir -p "$workdir"
+    temp_output="/tmp/dp${i}_test_output.txt"
+
+    # 运行两次（预热 + 正式）
+    for run in 1 2; do
+        env XDG_RUNTIME_DIR=/root \
+            WAYLAND_DISPLAY="wayland-dp${i}" \
+            SDL_VIDEODRIVER=wayland \
+            python3 -u /opt/factorytest/dp_uvc_compare.py \
+                --workdir "$workdir" \
+                --device "$uvc_device" \
+                --threshold 0.90 \
+                > "$temp_output" 2>&1 &
+
+        dp_pid=$!
+        count=0
+        while [ $count -lt 40 ]; do
+            if ! kill -0 $dp_pid 2>/dev/null; then
                 break
             fi
-            
-            if [ $run -eq 2 ]; then
-                sync
-                sleep 1
-                if grep -q "result: successful" "$temp_output" 2>/dev/null; then
-                    test_event "dp${i}:pass"
-                else
-                    test_event "dp${i}:fail"
-                fi
-                test_event "dp${i}:end"
-            fi
+            sleep 1
+            count=$((count + 1))
         done
+
+        wait $dp_pid 2>/dev/null || true
+
+        if [ $count -eq 40 ]; then
+            kill -9 $dp_pid 2>/dev/null
+            test_event "dp${i}:fail:timeout on run $run"
+            test_event "dp${i}:end"
+            break
+        fi
+
+        if [ $run -eq 2 ]; then
+            sync
+            sleep 1
+            if grep -q "result: successful" "$temp_output" 2>/dev/null; then
+                test_event "dp${i}:pass"
+            else
+                test_event "dp${i}:fail"
+            fi
+            test_event "dp${i}:end"
+        fi
     done
-    
-    # 清理 weston 进程
-    for pid in "${WESTON_PIDS[@]}"; do
-        kill $pid 2>/dev/null || true
-    done
-fi
+done
+
+# 清理 weston 进程
+for pid in "${WESTON_PIDS[@]}"; do
+    kill $pid 2>/dev/null || true
+done
 
 # ============================================
 # 在这里添加更多测试项
