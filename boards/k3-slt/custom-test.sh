@@ -10,7 +10,7 @@ echo 4 > /proc/sys/kernel/printk
 
 # 测试事件函数
 test_event() {
-    printf "TEST_EVENT:%s\n" "$*" | tee -a $LOG_FILE
+    printf "TEST_EVENT:%s\n" "$*"
 }
 
 # 详细失败日志函数（只在失败时调用）
@@ -35,21 +35,21 @@ test_detail_fail() {
             echo "$prefix (no detailed log available)"
         fi
         echo "$prefix ========================================"
-    } | tee -a $LOG_FILE
+    }
 }
 
 # 开始总测试
-test_event "all:start"
+test_event "all:start" | tee -a $LOG_FILE
 
 # 读取芯片ID (serial number)
 CHIP_ID=""
 CHIP_ID_FILE="/sys/bus/soc/devices/soc0/serial_number"
 if [ -f "$CHIP_ID_FILE" ]; then
     CHIP_ID=$(cat "$CHIP_ID_FILE" 2>/dev/null)
-    test_event "chip_id:$CHIP_ID"
+    test_event "chip_id:$CHIP_ID" | tee -a $LOG_FILE
 else
     CHIP_ID="unknown"
-    test_event "chip_id:unknown"
+    test_event "chip_id:unknown" | tee -a $LOG_FILE
 fi
 
 # ============================================
@@ -95,7 +95,7 @@ test_ddr() {
         else
             test_event "ddr:fail:memtester not found"
         fi
-    } > "$ddr_event_log" 2>&1
+    } 2>&1 | tee "$ddr_event_log"
 }
 
 # ============================================
@@ -164,7 +164,7 @@ test_ufs() {
         else
             test_event "ufs:fail:fio not found"
         fi
-    } > "$ufs_event_log" 2>&1
+    } 2>&1 | tee "$ufs_event_log"
 }
 
 # ============================================
@@ -257,7 +257,8 @@ test_single_dp() {
 
         workdir="/opt/factorytest/res/dp_uvc_compare_${dp_index}"
         mkdir -p "$workdir"
-        temp_output="/tmp/dp${dp_index}_test_output.txt"
+        temp_output="/var/log/dp${dp_index}_test_output.txt"
+        rm -f "$temp_output"
 
         # 运行两次（预热 + 正式）
         for run in 1 2; do
@@ -287,7 +288,7 @@ test_single_dp() {
                 test_event "dp${dp_index}:fail:timeout on run $run"
                 test_detail_fail "dp${dp_index}" "timeout on run $run" "$temp_output"
                 test_event "dp${dp_index}:end"
-                rm -f "$temp_output"
+                
                 kill $weston_pid 2>/dev/null || true
                 return 1
             fi
@@ -297,11 +298,11 @@ test_single_dp() {
                 sleep 1
                 if grep -q "result: successful" "$temp_output" 2>/dev/null; then
                     test_event "dp${dp_index}:pass"
-                    rm -f "$temp_output"
+                    
                 else
                     test_event "dp${dp_index}:fail"
                     test_detail_fail "dp${dp_index}" "comparison failed" "$temp_output"
-                    rm -f "$temp_output"
+                    
                 fi
                 test_event "dp${dp_index}:end"
             fi
@@ -310,7 +311,7 @@ test_single_dp() {
         # 清理 weston 进程
         kill $weston_pid 2>/dev/null || true
 
-    } > "$dp_event_log" 2>&1
+    } 2>&1 | tee "$dp_event_log"
 }
 
 # ============================================
@@ -377,4 +378,4 @@ fi
 # fi
 
 # 结束总测试
-test_event "all:end"
+test_event "all:end" | tee -a $LOG_FILE
