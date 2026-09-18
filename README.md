@@ -157,7 +157,20 @@ BR2_PACKAGE_FACTORYTEST_BOARD_<BOARD_MACRO>=y
 
 前提：系统已存在普通用户（假设为`bianbu`，uid 1000），且用户已正常进桌面。
 
-以 root 身份执行：
+1. 安装产测软件包
+
+如果产测软件包已在源中，可直接`apt install`安装
+
+```bash
+sudo apt-get update && sudo apt-get install spacemit-factory-k3-<board-name>
+```
+如果自己定制的deb包，直接安装
+
+```bash
+sudo dpkg -i spacemit-factory-k3-<board-name>.deb
+```
+
+2. 以 root 身份执行：
 
 ```bash
 export XDG_RUNTIME_DIR=/run/user/1000
